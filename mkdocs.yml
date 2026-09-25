@@ -1,0 +1,28 @@
+site_name: po-multiagente
+site_description: Plataforma multiagente low-code para Pesquisa Operacional
+repo_url: https://github.com/ThiagoBibiano/po-multiagente
+theme:
+  name: material
+  language: pt-BR
+  features:
+    - navigation.sections
+    - content.code.copy
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.superfences
+nav:
+  - Início: index.md
+  - Plano: plano.md
+  - Decisões:
+      - adr/README.md
+      - adr/001-interface-gradio.md
+      - adr/002-compilador-deterministico.md
+      - adr/003-llm-agnostico.md
+      - adr/004-visibilidade.md
+      - adr/005-idioma-portugues.md
+      - adr/006-solver-agnostico.md
+      - adr/007-langgraph.md
+      - adr/008-erros-de-formato.md
+      - adr/009-tres-repositorios.md
+      - adr/010-camadas.md

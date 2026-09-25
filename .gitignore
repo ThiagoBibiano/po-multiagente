@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Ambientes e caches de ferramentas
+.venv
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.import_linter_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Documentação gerada
+site/
+
+# Segredos (chaves de API vêm do ambiente ou dos Secrets do Colab)
+.env
+.env.*
+
+# Saídas de execução (dossiês e resultados do experimento)
+saidas/
+
+# Conjunto-teste: vive no repositório privado (ADR-009); defesa em
+# profundidade junto com o hook do pre-commit e a checagem do CI.
+conjunto_teste/
+gabarito/
+gabaritos/

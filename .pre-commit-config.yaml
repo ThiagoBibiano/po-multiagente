@@ -1,0 +1,44 @@
+# Ruff, mypy e import-linter rodam via `uv run`, com as versões fixadas em
+# uv.lock: a mesma versão no hook, no CI e no terminal.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: lint-imports
+        name: contratos de camada
+        entry: uv run lint-imports
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: bloqueia-conjunto-teste
+        name: conjunto-teste fica no repositório privado
+        entry: gabaritos e instâncias pertencem a po-multiagente-conjunto-teste (ADR-009)
+        language: fail
+        files: (^|/)(conjunto_teste|gabaritos?)/

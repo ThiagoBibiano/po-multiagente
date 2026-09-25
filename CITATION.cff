@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "Se usar este software, cite-o conforme abaixo."
+title: "po-multiagente: plataforma multiagente low-code para Pesquisa Operacional"
+authors:
+  - family-names: "da Silva"
+    given-names: "Thiago Bibiano"
+license: MIT
+repository-code: "https://github.com/ThiagoBibiano/po-multiagente"
+keywords:
+  - pesquisa operacional
+  - otimização
+  - modelos de linguagem
+  - sistemas multiagente
