@@ -214,7 +214,7 @@ def test_s4_localiza_requisito_descoberto_e_citacao_invalida(
     )
     verificacao = sinal_s4_requisitos(ir, quadro)
     assert verificacao.elementos == ("REQ3", "objetivo", "capacidade")
-    assert "REQ3: requisito sem restrição nem objetivo" in verificacao.mensagem
+    assert "REQ3: requisito sem restrição, domínio de variável nem objetivo" in verificacao.mensagem
     assert "capacidade: cita REQ9" in verificacao.mensagem
 
 
@@ -325,3 +325,23 @@ def test_dominio_vazio_so_para_limites_impossiveis() -> None:
         [res("r", {"a": 1.0}, GE, 2.0)],
     )
     assert localizar_inviabilidade(m, resolver) == ("r",)
+
+
+def test_s4_aceita_requisito_atendido_pelo_dominio(
+    especificacao: Especificacao, modelo: ModeloIR
+) -> None:
+    quadro = especificacao.model_copy(
+        update={
+            "requisitos": (
+                *especificacao.requisitos,
+                Requisito(id="REQ3", texto="Não dá para entregar fração de móvel"),
+            )
+        }
+    )
+    inteira = modelo.variaveis[0].model_copy(
+        update={"tipo": TipoVariavel.INTEIRA, "requisitos": ("REQ3",)}
+    )
+    assert sinal_s4_requisitos(modelo.model_copy(update={"variaveis": (inteira,)}), quadro).aprovada
+    invalida = inteira.model_copy(update={"requisitos": ("REQ7",)})
+    verificacao = sinal_s4_requisitos(modelo.model_copy(update={"variaveis": (invalida,)}), quadro)
+    assert verificacao.elementos == ("REQ3", "x")

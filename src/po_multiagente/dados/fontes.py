@@ -41,24 +41,34 @@ class Fontes:
     Args:
         diretorio: Diretório com os arquivos do usuário. Só os arquivos
             diretamente nele, com extensão aceita, são fontes.
+        adicionais: Outros diretórios da mesma sessão, como o dos arquivos
+            tratados que o usuário devolve em resposta às solicitações.
+
+    Raises:
+        NotADirectoryError: Se algum diretório não existir.
+        ErroDados: Se o mesmo nome de arquivo aparecer em dois diretórios.
     """
 
-    def __init__(self, diretorio: Path) -> None:
-        if not diretorio.is_dir():
-            raise NotADirectoryError(diretorio)
-        self._diretorio = diretorio
+    def __init__(self, diretorio: Path, *adicionais: Path) -> None:
+        self._caminhos: dict[str, Path] = {}
+        for pasta in (diretorio, *adicionais):
+            if not pasta.is_dir():
+                raise NotADirectoryError(pasta)
+            for caminho in sorted(pasta.iterdir()):
+                if not (caminho.is_file() and caminho.suffix.lower() in EXTENSOES):
+                    continue
+                if caminho.name in self._caminhos:
+                    raise ErroDados(
+                        f"O arquivo {caminho.name!r} aparece em mais de um diretório",
+                        arquivo=caminho.name,
+                    )
+                self._caminhos[caminho.name] = caminho
         self._tabelas: dict[str, tuple[Tabela, ...]] = {}
 
     @property
     def arquivos(self) -> tuple[str, ...]:
-        """Nomes dos arquivos de dados do diretório, em ordem alfabética."""
-        return tuple(
-            sorted(
-                caminho.name
-                for caminho in self._diretorio.iterdir()
-                if caminho.is_file() and caminho.suffix.lower() in EXTENSOES
-            )
-        )
+        """Nomes dos arquivos de dados, em ordem alfabética."""
+        return tuple(sorted(self._caminhos))
 
     def tabelas(self, arquivo: str) -> tuple[Tabela, ...]:
         """Tabelas de um arquivo: uma para CSV, uma por aba para XLSX.
@@ -112,13 +122,13 @@ class Fontes:
         """
         alteradas = []
         for fonte in fontes:
-            caminho = self._diretorio / arquivo_da_fonte(fonte.arquivo)
-            if not caminho.is_file() or sha256_arquivo(caminho) != fonte.sha256:
+            caminho = self._caminhos.get(arquivo_da_fonte(fonte.arquivo))
+            if caminho is None or not caminho.is_file() or sha256_arquivo(caminho) != fonte.sha256:
                 alteradas.append(fonte.arquivo)
         return tuple(alteradas)
 
     def _caminho(self, arquivo: str) -> Path:
-        # Só nomes simples: impede ler fora do diretório (``../``).
-        if Path(arquivo).name != arquivo or arquivo not in self.arquivos:
+        # Só arquivos listados na criação: impede ler fora dos diretórios (``../``).
+        if arquivo not in self._caminhos:
             raise ErroDados(f"Não há arquivo de dados chamado {arquivo!r}", arquivo=arquivo)
-        return self._diretorio / arquivo
+        return self._caminhos[arquivo]

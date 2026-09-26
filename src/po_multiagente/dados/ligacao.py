@@ -12,12 +12,10 @@ from dataclasses import dataclass
 from po_multiagente.dados.erros import ErroDados, ErroLigacao
 from po_multiagente.dados.fontes import Fontes
 from po_multiagente.dados.leitura import Celula, Tabela, texto_celula
-from po_multiagente.dominio import Especificacao, ModeloIR, MotivoTratamento, TipoColuna
+from po_multiagente.dominio import Especificacao, Filtro, ModeloIR, MotivoTratamento
 
 Chave = tuple[str, ...]
 """Membros dos conjuntos que indexam um valor, na ordem dos índices."""
-
-_NUMERICOS = (TipoColuna.INTEIRO, TipoColuna.DECIMAL)
 
 
 @dataclass(frozen=True)
@@ -28,44 +26,54 @@ class DadosLigados:
     parametros: Mapping[str, Mapping[Chave, float]]
 
 
-def membros(tabela: Tabela, coluna: str) -> tuple[str, ...]:
+def membros(tabela: Tabela, coluna: str, filtros: Sequence[Filtro] = ()) -> tuple[str, ...]:
     """Valores distintos da coluna, na ordem em que aparecem.
 
     Raises:
         ErroDados: Se a coluna não existir ou tiver célula vazia.
     """
     vistos: dict[str, None] = {}
+    selecionadas = _linhas_filtradas(tabela, filtros)
     for linha, valor in enumerate(tabela.valores(coluna), start=2):
+        if linha - 2 not in selecionadas:
+            continue
         if valor is None:
             raise _faltante(tabela, coluna, linha)
         vistos.setdefault(texto_celula(valor), None)
     return tuple(vistos)
 
 
-def valores(tabela: Tabela, coluna: str, chaves: Sequence[str]) -> dict[Chave, float]:
+def valores(
+    tabela: Tabela, coluna: str, chaves: Sequence[str], filtros: Sequence[Filtro] = ()
+) -> dict[Chave, float]:
     """Valores numéricos da coluna, indexados pelas colunas-chave.
 
-    Sem chaves, o parâmetro é escalar e a coluna deve ter exatamente um
-    valor preenchido.
+    Sem chaves, o parâmetro é escalar e a coluna, nas linhas selecionadas
+    pelos filtros, deve ter exatamente um valor preenchido. A coluna só
+    precisa ser numérica nas linhas selecionadas: numa tabela "longa", as
+    demais linhas podem ter texto.
 
     Raises:
         ErroDados: Se uma coluna não existir, se a coluna de valores não for
             numérica, se houver célula vazia ou chave repetida.
     """
-    if tabela.tipo(coluna) not in _NUMERICOS:
-        exemplo = next((v for v in tabela.valores(coluna) if v is not None), None)
+    selecionadas = _linhas_filtradas(tabela, filtros)
+    numeros = tuple(v if i in selecionadas else None for i, v in enumerate(tabela.valores(coluna)))
+    if not all(_eh_numero(v) for v in numeros if v is not None):
+        exemplo = next((v for v in numeros if v is not None and not _eh_numero(v)), None)
         raise ErroDados(
             f"A coluna {coluna!r} de {tabela.nome!r} não é numérica (ex.: {exemplo!r})",
             arquivo=tabela.nome,
             coluna=coluna,
             motivo=MotivoTratamento.UNIDADE,
         )
-    numeros = tabela.valores(coluna)
     if not chaves:
         return {(): _escalar(tabela, coluna, numeros)}
     colunas_chave = [tabela.valores(c) for c in chaves]
     resultado: dict[Chave, float] = {}
     for posicao, numero in enumerate(numeros):
+        if posicao not in selecionadas:
+            continue
         linha = posicao + 2
         celulas = [valores_chave[posicao] for valores_chave in colunas_chave]
         for nome, celula in zip(chaves, celulas, strict=True):
@@ -101,7 +109,9 @@ def ligar(modelo: ModeloIR, especificacao: Especificacao, fontes: Fontes) -> Dad
     for conjunto in modelo.conjuntos:
         try:
             tabela = fontes.tabela(conjunto.origem.arquivo)
-            conjuntos[conjunto.id] = membros(tabela, conjunto.origem.coluna)
+            conjuntos[conjunto.id] = membros(
+                tabela, conjunto.origem.coluna, conjunto.origem.filtros
+            )
         except ErroDados as erro:
             erros.append(erro)
     origens = {p.id: p.origem for p in especificacao.parametros}
@@ -128,7 +138,7 @@ def ligar(modelo: ModeloIR, especificacao: Especificacao, fontes: Fontes) -> Dad
             continue
         try:
             tabela = fontes.tabela(origem.arquivo)
-            parametros[parametro.id] = valores(tabela, origem.coluna, origem.chaves)
+            parametros[parametro.id] = valores(tabela, origem.coluna, origem.chaves, origem.filtros)
         except ErroDados as erro:
             erros.append(erro)
     if erros:
@@ -137,8 +147,14 @@ def ligar(modelo: ModeloIR, especificacao: Especificacao, fontes: Fontes) -> Dad
 
 
 def _escalar(tabela: Tabela, coluna: str, numeros: Sequence[Celula]) -> float:
-    # A coluna é numérica, logo tem ao menos um valor preenchido.
     preenchidos = [n for n in numeros if n is not None]
+    if not preenchidos:
+        raise ErroDados(
+            f"A coluna {coluna!r} de {tabela.nome!r} não tem valor nas linhas selecionadas",
+            arquivo=tabela.nome,
+            coluna=coluna,
+            motivo=MotivoTratamento.FALTANTE,
+        )
     if len(preenchidos) > 1:
         raise ErroDados(
             f"A coluna {coluna!r} de {tabela.nome!r} tem {len(preenchidos)} valores, mas o "
@@ -157,6 +173,32 @@ def _faltante(tabela: Tabela, coluna: str, linha: int) -> ErroDados:
         coluna=coluna,
         motivo=MotivoTratamento.FALTANTE,
     )
+
+
+def _linhas_filtradas(tabela: Tabela, filtros: Sequence[Filtro]) -> frozenset[int]:
+    """Posições (a partir de 0) das linhas que passam em todos os filtros.
+
+    Raises:
+        ErroDados: Se um filtro não selecionar nenhuma linha.
+    """
+    selecionadas = frozenset(range(len(tabela.linhas)))
+    for filtro in filtros:
+        celulas = tabela.valores(filtro.coluna)
+        selecionadas = frozenset(
+            i for i in selecionadas if texto_celula(celulas[i]) == filtro.valor
+        )
+        if not selecionadas:
+            raise ErroDados(
+                f"Nenhuma linha de {tabela.nome!r} tem {filtro.coluna!r} igual a {filtro.valor!r}",
+                arquivo=tabela.nome,
+                coluna=filtro.coluna,
+                motivo=MotivoTratamento.IDENTIFICADOR,
+            )
+    return selecionadas
+
+
+def _eh_numero(celula: Celula) -> bool:
+    return isinstance(celula, int | float) and not isinstance(celula, bool)
 
 
 def _numero(celula: Celula) -> float:

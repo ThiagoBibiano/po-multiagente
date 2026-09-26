@@ -89,3 +89,23 @@ def test_leitura_nao_altera_os_arquivos(pasta: Path) -> None:
 )
 def test_arquivo_da_fonte(nome: str, arquivo: str) -> None:
     assert arquivo_da_fonte(nome) == arquivo
+
+
+def test_fontes_de_varios_diretorios(pasta: Path, tmp_path_factory: pytest.TempPathFactory) -> None:
+    tratados = tmp_path_factory.mktemp("tratados")
+    (tratados / "lucro_tratado.csv").write_text("Produto;Lucro\nA;1\n", encoding="utf-8")
+    fontes = Fontes(pasta, tratados)
+    assert fontes.arquivos == ("fabrica.xlsx", "lucro_tratado.csv", "produtos.csv")
+    inventario = fontes.inventario()
+    assert fontes.conferir_integridade(inventario) == ()
+    (tratados / "lucro_tratado.csv").write_text("Produto;Lucro\nA;2\n", encoding="utf-8")
+    assert fontes.conferir_integridade(inventario) == ("lucro_tratado.csv",)
+
+
+def test_mesmo_arquivo_em_dois_diretorios_e_rejeitado(
+    pasta: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    outra = tmp_path_factory.mktemp("outra")
+    (outra / "produtos.csv").write_text("x\n1\n", encoding="utf-8")
+    with pytest.raises(ErroDados, match="mais de um diretório"):
+        Fontes(pasta, outra)

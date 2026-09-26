@@ -54,7 +54,9 @@ class Variavel(ObjetoDominio):
     """Variável de decisão indexada.
 
     Os limites são opcionais; ``None`` significa ilimitada naquele lado. O
-    padrão é não negativa, o caso comum em PL e PLIM.
+    padrão é não negativa, o caso comum em PL e PLIM. ``requisitos`` liga o
+    domínio a um requisito de negócio, como "não dá para entregar fração de
+    móvel", que o domínio atende sem restrição própria.
     """
 
     id: Identificador
@@ -64,6 +66,7 @@ class Variavel(ObjetoDominio):
     indices: tuple[Identificador, ...] = ()
     limite_inferior: float | None = 0.0
     limite_superior: float | None = None
+    requisitos: tuple[IdRequisito, ...] = ()
 
     @model_validator(mode="after")
     def _limites_coerentes(self) -> "Variavel":

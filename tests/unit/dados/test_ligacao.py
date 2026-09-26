@@ -15,6 +15,7 @@ from po_multiagente.dados import (
 from po_multiagente.dominio import (
     Coluna,
     Especificacao,
+    Filtro,
     FonteDados,
     ModeloIR,
     MotivoTratamento,
@@ -168,3 +169,38 @@ def test_ligar_aponta_fonte_inexistente(tmp_path: Path, modelo: ModeloIR) -> Non
         "Não há arquivo de dados chamado 'outra.csv'",
         "O parâmetro 'horas' não tem origem no quadro de especificação",
     ]
+
+
+def test_filtro_isola_celula_de_tabela_longa(tmp_path: Path) -> None:
+    t = tabela(tmp_path, "recurso;disponivel\nmadeira;300\nhoras;110\n")
+    assert valores(t, "disponivel", (), (Filtro(coluna="recurso", valor="horas"),)) == {(): 110.0}
+
+
+def test_coluna_mista_em_tabela_longa_pede_tratamento(tmp_path: Path) -> None:
+    # Com texto em outra linha, a coluna é texto: ler "110" como número seria
+    # interpretar o dado, e não só endereçá-lo.
+    t = tabela(tmp_path, "recurso;disponivel\nmadeira;300\nhoras;110\nobs;sem limite\n")
+    with pytest.raises(ErroDados, match="não é numérica") as erro:
+        valores(t, "disponivel", (), (Filtro(coluna="recurso", valor="horas"),))
+    assert erro.value.motivo is MotivoTratamento.UNIDADE
+
+
+def test_filtro_restringe_membros_e_valores_indexados(tmp_path: Path) -> None:
+    t = tabela(tmp_path, "mes;produto;v\njan;A;1\njan;B;2\nfev;A;3\n")
+    fevereiro = (Filtro(coluna="mes", valor="fev"),)
+    assert membros(t, "produto", fevereiro) == ("A",)
+    assert valores(t, "v", ("produto",), fevereiro) == {("A",): 3.0}
+
+
+def test_filtro_sem_linha_pede_tratamento_de_identificador(tmp_path: Path) -> None:
+    t = tabela(tmp_path, "recurso;disponivel\nmadeira;300\n")
+    with pytest.raises(ErroDados, match="Nenhuma linha") as erro:
+        valores(t, "disponivel", (), (Filtro(coluna="recurso", valor="Madeira"),))
+    assert erro.value.motivo is MotivoTratamento.IDENTIFICADOR
+
+
+def test_escalar_filtrado_sem_valor_e_faltante(tmp_path: Path) -> None:
+    t = tabela(tmp_path, "recurso;disponivel\nmadeira;300\nhoras;\n")
+    with pytest.raises(ErroDados, match="não tem valor") as erro:
+        valores(t, "disponivel", (), (Filtro(coluna="recurso", valor="horas"),))
+    assert erro.value.motivo is MotivoTratamento.FALTANTE

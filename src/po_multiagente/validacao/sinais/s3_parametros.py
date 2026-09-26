@@ -51,6 +51,6 @@ def _colunas_ausentes(origem: Origem, colunas: dict[str, set[str]]) -> list[str]
         return [f"aponta para {origem.arquivo!r}, que não está entre as fontes"]
     return [
         f"a coluna {coluna!r} não existe em {origem.arquivo!r}"
-        for coluna in (origem.coluna, *origem.chaves)
+        for coluna in (origem.coluna, *origem.chaves, *(f.coluna for f in origem.filtros))
         if coluna not in colunas[origem.arquivo]
     ]

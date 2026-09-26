@@ -47,6 +47,17 @@ class FonteDados(ObjetoDominio):
         return self
 
 
+class Filtro(ObjetoDominio):
+    """Seleção de linhas: só as linhas em que ``coluna`` vale ``valor``.
+
+    Endereça o dado sem transformá-lo, como numa tabela "longa" em que a
+    disponibilidade de cada recurso está na linha daquele recurso.
+    """
+
+    coluna: TextoNaoVazio
+    valor: TextoNaoVazio
+
+
 class Origem(ObjetoDominio):
     """De onde vêm os valores de um parâmetro ou os membros de um conjunto.
 
@@ -55,6 +66,8 @@ class Origem(ObjetoDominio):
         coluna: Coluna com os valores.
         chaves: Colunas que indexam os valores, na ordem dos índices; vazio
             para um valor escalar ou para os membros de um conjunto.
+        filtros: Linhas consideradas; vazio para todas. Um parâmetro escalar
+            numa tabela com várias linhas é a célula que os filtros isolam.
         solicitacao_id: Solicitação de tratamento que originou o arquivo,
             quando o dado não estava disponível diretamente.
     """
@@ -62,4 +75,5 @@ class Origem(ObjetoDominio):
     arquivo: TextoNaoVazio
     coluna: TextoNaoVazio
     chaves: tuple[TextoNaoVazio, ...] = ()
+    filtros: tuple[Filtro, ...] = ()
     solicitacao_id: Identificador | None = None
