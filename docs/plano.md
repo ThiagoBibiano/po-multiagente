@@ -172,8 +172,8 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 
 | Fase | Entrega | LLM? | Estado |
 |---|---|---|---|
-| F0 Fundação | Três repositórios, ferramentas, CI, esqueleto, `dominio`, ADR-001 a ADR-010, workspace e `additionalDirectories` | Não | Concluída localmente; falta publicar no GitHub |
-| F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Pendente |
+| F0 Fundação | Três repositórios, ferramentas, CI, esqueleto, `dominio`, ADR-001 a ADR-010, workspace e `additionalDirectories` | Não | Concluída |
+| F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Concluída, exceto o piloto (seção 10) |
 | F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Pendente |
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
 | F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade | — | Pendente |
@@ -182,3 +182,23 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | F7 Congelamento | v1.0 + DOI → experimento → `importa_resultados.py` → TG2 | — | Pendente |
 
 **Critério de pronto da F0:** `uv run pre-commit run -a` e `uv run pytest` passando, e um import proibido quebrando o build. A criação dos repositórios no GitHub e o primeiro push são feitos com confirmação do autor.
+
+## 10. Notas da F1 (26/09/2026)
+
+**Entregue.** `dados` (CSV/XLSX somente leitura, inventário, hash, ligação), `modelo` (gramática Lark, compilação, instanciação neutra, unidades, LaTeX), `solver` (contrato, registro, PuLP/CBC 2.10.3, suíte de conformidade) e `validacao` (S1–S5). Um teste de integração percorre o núcleo de ponta a ponta numa instância sintética. A mini-linguagem está documentada em [gramatica.md](gramatica.md), que servirá de base ao prompt do Modelador.
+
+**Decisões tomadas na implementação** (revisáveis antes da F7):
+
+| Decisão | Motivo |
+|---|---|
+| Não linearidade (produto de variáveis, divisão por variável) é erro de compilação, e não sinal do Validador | O modelo não chega ao solver; pela ADR-008, volta ao Modelador igual nas duas configurações |
+| S1 localiza a causa: famílias de restrições incompatíveis (filtro de deleção) ou variáveis sem limite | O CBC não fornece IIS; sem localização, o S1 não atende ao princípio de "localizar" do cap. 3 |
+| S5 = viabilidade da solução conferida com os dados + rejeição da **cota trivial** | Ver ponto em aberto 2 |
+| Constantes na expressão (`<= 200`) são aceitas e adotam a unidade do outro lado | Ver ponto em aberto 1 |
+| `pulp>=3.3,<4` | O PuLP 4 remove o CBC 2.10.3 embutido (ADR-006) |
+
+**Pontos em aberto para o autor:**
+
+1. **Constantes da descrição.** Um limite escrito no texto ("200 horas") não tem arquivo nem coluna, e `Origem` exige os dois. Hoje ele entra como número na expressão, sem unidade e sem rastreio. Proposta para a F2: uma origem `descricao` com o trecho citado, conferida por código (o número tem de aparecer literalmente no trecho, e o trecho na descrição).
+2. **Alcance do S5.** Com a solução vinda do solver, a checagem "fora da faixa admitida pelos dados" nunca dispara: toda solução viável está dentro da faixa propagada. O que dá poder ao S5 é a regra da cota trivial (valor objetivo igual ao obtido só com os domínios, como custo mínimo zero). Ela é heurística: pode reprovar um modelo correto cujo ótimo seja "não fazer nada". Está ligada por padrão (`rejeitar_cota_trivial`); precisa de decisão antes do congelamento, e o texto do cap. 3 talvez precise refletir isso.
+3. **Piloto como 1ª instância.** Os arquivos do piloto do TG1 (descrição, dados, formulação de referência) não estão em nenhum dos três repositórios. Para convertê-lo em instância do conjunto-teste, é preciso recuperá-los.
