@@ -8,7 +8,7 @@ Formato de uma instância, igual no conjunto de calibração e no conjunto-teste
     ├── dados_tratados/         # respostas às solicitações de tratamento, se houver
     ├── referencia/quadro.json  # quadro de especificação de referência, sem "fontes"
     ├── referencia/modelo.json  # formulação de referência (ModeloIR)
-    ├── solucao.json            # {"valor_objetivo": ..., "fonte": "..."}
+    ├── solucao.json            # valor objetivo e fonte; ou {"status": "inviavel"}
     └── meta.yaml               # família, classe, origem, partição...
 
 As fontes do quadro são preenchidas pelo inventário dos dados, com o hash de
@@ -31,6 +31,7 @@ from po_multiagente.dominio import (
     Especificacao,
     ModeloIR,
     ResultadoSolver,
+    Sinal,
     StatusSolucao,
     TipoVariavel,
     Verificacao,
@@ -67,7 +68,8 @@ class Instancia:
     fontes: Fontes
     especificacao: Especificacao
     modelo: ModeloIR
-    valor_esperado: float
+    status_esperado: StatusSolucao
+    valor_esperado: float | None
     meta: dict[str, Any]
 
 
@@ -123,7 +125,8 @@ def carregar_instancia(pasta: Path) -> Instancia:
         fontes=fontes,
         especificacao=especificacao,
         modelo=modelo,
-        valor_esperado=float(solucao["valor_objetivo"]),
+        status_esperado=StatusSolucao(solucao.get("status", StatusSolucao.OTIMO.value)),
+        valor_esperado=(float(solucao["valor_objetivo"]) if "valor_objetivo" in solucao else None),
         meta=meta,
     )
 
@@ -170,13 +173,28 @@ def validar_instancia(
         sinal_s4_requisitos(instancia.modelo, instancia.especificacao),
         sinal_s5_limites(modelo, resultado, criterio=instancia.especificacao.criterio),
     )
-    problemas += [f"{v.sinal.value}: {v.mensagem}" for v in verificacoes if not v.aprovada]
+    # Numa instância sem solução por construção, a reprovação do S1 é o esperado.
+    problemas += [
+        f"{v.sinal.value}: {v.mensagem}"
+        for v in verificacoes
+        if not v.aprovada
+        and not (v.sinal is Sinal.S1 and instancia.status_esperado is not StatusSolucao.OTIMO)
+    ]
     avisos += [f"{v.sinal.value}: {v.confirmacao}" for v in verificacoes if v.confirmacao]
     obtido = resultado.valor_objetivo
     esperado = instancia.valor_esperado
-    if resultado.status is not StatusSolucao.OTIMO or obtido is None:
-        problemas.append(f"a referência não chega ao ótimo (status {resultado.status.value})")
-    elif abs(obtido - esperado) > epsilon * max(abs(esperado), 1e-9):
+    if resultado.status is not instancia.status_esperado:
+        problemas.append(
+            f"a referência termina com status {resultado.status.value}; a solução registrada "
+            f"diz {instancia.status_esperado.value}"
+        )
+    elif obtido is not None and esperado is None:
+        problemas.append("solucao.json não registra o valor objetivo")
+    elif (
+        obtido is not None
+        and esperado is not None
+        and abs(obtido - esperado) > epsilon * max(abs(esperado), 1e-9)
+    ):
         problemas.append(
             f"valor objetivo da referência ({obtido:g}) difere da solução registrada "
             f"({esperado:g}) além de {epsilon:.0%}"

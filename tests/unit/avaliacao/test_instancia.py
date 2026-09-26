@@ -134,3 +134,25 @@ def test_cli_valida_pasta_de_instancias(tmp_path: Path, capsys: pytest.CaptureFi
     assert "FALHA b" in saida
     assert "1/2 instância(s) válida(s)" in saida
     assert main(["validar-instancia", str(tmp_path / "conjunto" / "a")]) == 0
+
+
+def test_instancia_inviavel_por_construcao(tmp_path: Path) -> None:
+    pasta = criar(tmp_path / "i5")
+    modelo = {
+        **MODELO,
+        "restricoes": [
+            *MODELO["restricoes"],
+            {
+                "id": "minimo",
+                "descricao": "Mínimo impossível",
+                "requisitos": ["REQ2"],
+                "expressao": "sum(horas[p] * x[p] for p in P) >= cap + 1",
+            },
+        ],
+    }
+    (pasta / "referencia" / "modelo.json").write_text(json.dumps(modelo), "utf-8")
+    (pasta / "solucao.json").write_text(json.dumps({"status": "inviavel"}), "utf-8")
+    relatorio = validar_instancia(pasta)
+    assert relatorio.valida, relatorio.problemas
+    (pasta / "solucao.json").write_text(json.dumps({"valor_objetivo": 30}), "utf-8")
+    assert any("status inviavel" in p for p in validar_instancia(pasta).problemas)

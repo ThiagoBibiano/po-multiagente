@@ -68,7 +68,7 @@ def _pastas_de_instancia(pastas: Sequence[Path]) -> list[Path]:
 def _formatar(relatorio: RelatorioInstancia) -> str:
     marca = "OK   " if relatorio.valida else "FALHA"
     valores = ""
-    if relatorio.valor_obtido is not None:
+    if relatorio.valor_obtido is not None and relatorio.valor_esperado is not None:
         valores = f"  obtido={relatorio.valor_obtido:g} esperado={relatorio.valor_esperado:g}"
     linhas = [f"{marca} {relatorio.pasta.name}{valores}"]
     linhas += [f"      ✗ {p}" for p in relatorio.problemas]
