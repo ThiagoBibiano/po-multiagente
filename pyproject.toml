@@ -95,6 +95,10 @@ ignore = [
     "D107",
 ]
 
+[tool.ruff.lint.pylint]
+# Despacho por `match` sobre os nós da árvore sintática: um return por variante.
+max-returns = 8
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
@@ -102,7 +106,7 @@ convention = "google"
 ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D", "ANN", "PLR2004"]
+"tests/**" = ["D", "ANN", "PLR2004", "PLR0913"]
 
 # --------------------------------------------------------------------------
 # Mypy
