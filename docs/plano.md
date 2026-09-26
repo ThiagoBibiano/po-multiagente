@@ -174,12 +174,15 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 |---|---|---|---|
 | F0 Fundação | Três repositórios, ferramentas, CI, esqueleto, `dominio`, ADR-001 a ADR-010, workspace e `additionalDirectories` | Não | Concluída |
 | F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Concluída, exceto o piloto (seção 10) |
-| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Pendente |
+| F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Em andamento: ferramenta pronta, 3/36 instâncias |
+| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Pendente; calibrada na partição de ajuste da F1b |
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
-| F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade | — | Pendente |
+| F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Pendente |
 | F5 Conjunto-teste (paralelo desde F1) | Formato, `validar-instancia`, 24 instâncias, revisão cruzada | Não | Pendente |
 | F6 Avaliação e experimento | Critérios 1–4, McNemar, taxonomia, executor, exportação `.tex` | Sim | Pendente |
 | F7 Congelamento | v1.0 + DOI → experimento → `importa_resultados.py` → TG2 | — | Pendente |
+
+**Ordem de trabalho (decidida em 26/09/2026):** F1 → F1b → F2, calibrada no conjunto de calibração → F4 mínima (interface) → teste com o usuário → F3, F5 e F6. O conjunto-teste só é executado depois que os prompts forem congelados.
 
 **Critério de pronto da F0:** `uv run pre-commit run -a` e `uv run pytest` passando, e um import proibido quebrando o build. A criação dos repositórios no GitHub e o primeiro push são feitos com confirmação do autor.
 
