@@ -28,8 +28,8 @@ from po_multiagente.modelo import (
 Chave = tuple[str, ...]
 
 
-def conjunto(id_: str) -> Conjunto:
-    return Conjunto(id=id_, descricao=id_, origem=Origem(arquivo="dados.csv", coluna=id_))
+def conjunto(id_: str, arquivo: str = "dados.csv", coluna: str | None = None) -> Conjunto:
+    return Conjunto(id=id_, descricao=id_, origem=Origem(arquivo=arquivo, coluna=coluna or id_))
 
 
 def variavel(
@@ -67,13 +67,13 @@ def modelo(
     objetivo: str,
     *restricoes: Restricao,
     sentido: Sentido = Sentido.MAXIMIZAR,
-    conjuntos: tuple[str, ...] = (),
+    conjuntos: tuple[str | Conjunto, ...] = (),
     parametros: dict[str, tuple[str, ...]] | None = None,
     variaveis: tuple[Variavel, ...] = (),
     requisitos_objetivo: tuple[str, ...] = (),
 ) -> ModeloIR:
     return ModeloIR(
-        conjuntos=tuple(conjunto(c) for c in conjuntos),
+        conjuntos=tuple(c if isinstance(c, Conjunto) else conjunto(c) for c in conjuntos),
         parametros=tuple(ParametroModelo(id=p, indices=i) for p, i in (parametros or {}).items()),
         variaveis=variaveis or (variavel("x"),),
         objetivo=Objetivo(
