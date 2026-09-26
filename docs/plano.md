@@ -193,12 +193,12 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 |---|---|
 | Não linearidade (produto de variáveis, divisão por variável) é erro de compilação, e não sinal do Validador | O modelo não chega ao solver; pela ADR-008, volta ao Modelador igual nas duas configurações |
 | S1 localiza a causa: famílias de restrições incompatíveis (filtro de deleção) ou variáveis sem limite | O CBC não fornece IIS; sem localização, o S1 não atende ao princípio de "localizar" do cap. 3 |
-| S5 = viabilidade da solução conferida com os dados + rejeição da **cota trivial** | Ver ponto em aberto 2 |
+| S5 = viabilidade da solução conferida com os dados + **pergunta ao usuário** na cota trivial | ADR-011 |
 | Constantes na expressão (`<= 200`) são aceitas e adotam a unidade do outro lado | Ver ponto em aberto 1 |
 | `pulp>=3.3,<4` | O PuLP 4 remove o CBC 2.10.3 embutido (ADR-006) |
 
 **Pontos em aberto para o autor:**
 
 1. **Constantes da descrição.** Um limite escrito no texto ("200 horas") não tem arquivo nem coluna, e `Origem` exige os dois. Hoje ele entra como número na expressão, sem unidade e sem rastreio. Proposta para a F2: uma origem `descricao` com o trecho citado, conferida por código (o número tem de aparecer literalmente no trecho, e o trecho na descrição).
-2. **Alcance do S5.** Com a solução vinda do solver, a checagem "fora da faixa admitida pelos dados" nunca dispara: toda solução viável está dentro da faixa propagada. O que dá poder ao S5 é a regra da cota trivial (valor objetivo igual ao obtido só com os domínios, como custo mínimo zero). Ela é heurística: pode reprovar um modelo correto cujo ótimo seja "não fazer nada". Está ligada por padrão (`rejeitar_cota_trivial`); precisa de decisão antes do congelamento, e o texto do cap. 3 talvez precise refletir isso.
-3. **Piloto como 1ª instância.** Os arquivos do piloto do TG1 (descrição, dados, formulação de referência) não estão em nenhum dos três repositórios. Para convertê-lo em instância do conjunto-teste, é preciso recuperá-los.
+2. **Alcance do S5.** Resolvido pela ADR-011: a cota trivial vira pergunta ao usuário, e não reprovação. Continua em aberto como responder a essa pergunta no experimento (F6).
+3. **Piloto como 1ª instância.** Os arquivos originais não foram encontrados. Os conjuntos prospectados (IndustryOR, NL4OPT, OR-Instruct-3K) foram baixados de forma reproduzível no repositório do conjunto-teste, e `PROSPECCAO.md` traz dois candidatos com as respostas conferidas pelo núcleo: IndustryOR 54 e 66. Falta o autor escolher um.

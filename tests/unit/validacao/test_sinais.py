@@ -247,7 +247,7 @@ def test_s5_rejeita_variavel_fora_do_dominio() -> None:
     assert verificacao.elementos == ("n",)
 
 
-def test_s5_rejeita_custo_minimo_na_cota_trivial() -> None:
+def test_s5_pergunta_ao_usuario_quando_custo_minimo_ignora_as_restricoes() -> None:
     # Falta a restrição de demanda: o custo mínimo é zero, sem produzir nada.
     m = neutro(
         Sentido.MINIMIZAR,
@@ -255,14 +255,19 @@ def test_s5_rejeita_custo_minimo_na_cota_trivial() -> None:
         [var("x"), var("y")],
         [res("capacidade", {"x": 1.0, "y": 1.0}, LE, 10.0)],
     )
-    verificacao = sinal_s5_limites(m, resolver(m))
-    assert not verificacao.aprovada
+    verificacao = sinal_s5_limites(m, resolver(m), criterio="Custo total")
+    assert verificacao.aprovada
     assert verificacao.elementos == ("objetivo",)
-    assert "coincide com a cota trivial (0)" in verificacao.mensagem
-    assert sinal_s5_limites(m, resolver(m), rejeitar_cota_trivial=False).aprovada
+    assert verificacao.confirmacao == (
+        "Com as exigências informadas, o melhor resultado para «Custo total» é 0, o mesmo que "
+        "se obteria sem exigência nenhuma. Isso costuma indicar que falta alguma exigência, "
+        "como uma quantidade mínima a atender. Esse resultado faz sentido para a sua operação?"
+    )
+    desligada = sinal_s5_limites(m, resolver(m), perguntar_cota_trivial=False)
+    assert desligada.confirmacao is None
 
 
-def test_s5_rejeita_lucro_maximo_zero() -> None:
+def test_s5_pergunta_ao_usuario_quando_lucro_maximo_e_nao_fazer_nada() -> None:
     # Sentido invertido na capacidade: nada pode ser produzido.
     m = neutro(
         Sentido.MAXIMIZAR,
@@ -270,7 +275,15 @@ def test_s5_rejeita_lucro_maximo_zero() -> None:
         [var("x")],
         [res("capacidade", {"x": -1.0}, GE, 0.0), res("tudo", {"x": 1.0}, LE, 0.0)],
     )
-    assert "cota trivial" in sinal_s5_limites(m, resolver(m)).mensagem
+    verificacao = sinal_s5_limites(m, resolver(m))
+    assert verificacao.aprovada
+    assert verificacao.confirmacao is not None
+    assert "para o objetivo é 0" in verificacao.confirmacao
+    assert "entendida ao contrário" in verificacao.confirmacao
+
+
+def test_s5_nao_pergunta_quando_as_restricoes_afetam_o_resultado() -> None:
+    assert sinal_s5_limites(WYNDOR, resolver(WYNDOR)).confirmacao is None
 
 
 def test_propagacao_de_limites() -> None:

@@ -14,3 +14,4 @@ Formato curto baseado no [MADR](https://adr.github.io/madr/): contexto, decisão
 | [ADR-008](008-erros-de-formato.md) | Erros de formato tratados no Modelador | Aceita |
 | [ADR-009](009-tres-repositorios.md) | Três repositórios com fluxo de mão única | Aceita |
 | [ADR-010](010-camadas.md) | Arquitetura em camadas verificada por contratos | Aceita |
+| [ADR-011](011-confirmacao-com-usuario.md) | Resultado suspeito vira pergunta ao usuário | Aceita (experimento em aberto) |

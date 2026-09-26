@@ -25,3 +25,5 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
     PuLP/CBC 2.10.3 e suíte de conformidade;
   - `validacao`: sinais S1 a S5, com localização de inviabilidade e ilimitação.
 - Documentação da mini-linguagem (`docs/gramatica.md`).
+- `Verificacao.confirmacao`: o S5 pergunta ao usuário, em vez de reprovar,
+  quando o valor objetivo coincide com uma cota trivial (ADR-011).

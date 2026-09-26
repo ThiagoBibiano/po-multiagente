@@ -8,15 +8,17 @@ Duas verificações, calculadas a partir dos dados, sem o solver:
    obtida por propagação de limites; a faixa entra só na mensagem, para
    leitura;
 2. o valor objetivo não coincide com uma cota trivial — a obtida só com os
-   domínios das variáveis, sem nenhuma restrição. Coincidir indica que as
-   restrições não afetam o resultado: custo mínimo zero porque falta a
-   restrição de demanda, ou lucro máximo zero porque um sentido está
-   invertido.
+   domínios das variáveis, sem nenhuma restrição. Coincidir costuma indicar
+   restrição faltante (custo mínimo zero porque falta a demanda) ou sentido
+   invertido (lucro máximo zero), mas pode ser a resposta certa. Por isso não
+   reprova: gera uma pergunta ao usuário sobre o resultado, em linguagem de
+   negócio (ADR-011), e a especificação é refinada se ele disser que o
+   resultado não faz sentido.
 """
 
 import math
 
-from po_multiagente.dominio import ResultadoSolver, Sinal, TipoVariavel, Verificacao
+from po_multiagente.dominio import ResultadoSolver, Sentido, Sinal, TipoVariavel, Verificacao
 from po_multiagente.modelo import OBJETIVO, ModeloInstanciado, Relacao
 from po_multiagente.validacao.cotas import (
     intervalo_do_objetivo,
@@ -32,7 +34,8 @@ def sinal_s5_limites(
     modelo: ModeloInstanciado,
     resultado: ResultadoSolver,
     *,
-    rejeitar_cota_trivial: bool = True,
+    criterio: str | None = None,
+    perguntar_cota_trivial: bool = True,
     tolerancia: float = TOLERANCIA,
 ) -> Verificacao:
     """Confronta a solução com os limites que os dados admitem.
@@ -40,7 +43,9 @@ def sinal_s5_limites(
     Args:
         modelo: Modelo instanciado que foi resolvido.
         resultado: Resultado do solver.
-        rejeitar_cota_trivial: Liga a terceira verificação (ver módulo).
+        criterio: Critério do quadro de especificação (``"Margem total"``),
+            usado para redigir a pergunta ao usuário.
+        perguntar_cota_trivial: Liga a segunda verificação (ver módulo).
         tolerancia: Folga relativa das comparações.
     """
     if not resultado.valores or resultado.valor_objetivo is None:
@@ -65,22 +70,58 @@ def sinal_s5_limites(
             tuple(dict.fromkeys(e for e, _ in violacoes)),
         )
     valor = resultado.valor_objetivo
-    trivial = intervalo_do_objetivo(modelo, limites_dos_dominios(modelo))
-    for cota in (trivial.inferior, trivial.superior):
-        if rejeitar_cota_trivial and math.isfinite(cota) and _proximos(valor, cota, tolerancia):
-            return _verificacao(
-                False,
-                f"O valor objetivo ({valor:g}) coincide com a cota trivial ({cota:g}) obtida só "
-                "com os domínios das variáveis: as restrições não afetam o resultado, o que "
-                "indica restrição faltante ou sentido invertido.",
-                (OBJETIVO,),
-            )
     faixa = intervalo_do_objetivo(modelo, limites_propagados(modelo))
+    descricao_faixa = f"[{_numero(faixa.inferior)}; {_numero(faixa.superior)}]"
+    pergunta = (
+        _pergunta_cota_trivial(modelo, valor, criterio, tolerancia)
+        if perguntar_cota_trivial
+        else None
+    )
+    if pergunta:
+        return _verificacao(
+            True,
+            f"O valor objetivo ({valor:g}) coincide com uma cota trivial, obtida só com os "
+            "domínios das variáveis: as restrições não afetam o resultado. Faixa admitida "
+            f"pelos dados: {descricao_faixa}.",
+            (OBJETIVO,),
+            confirmacao=pergunta,
+        )
     return _verificacao(
         True,
-        f"O valor objetivo ({valor:g}) está na faixa admitida pelos dados "
-        f"[{_numero(faixa.inferior)}; {_numero(faixa.superior)}].",
+        f"O valor objetivo ({valor:g}) está na faixa admitida pelos dados {descricao_faixa}.",
     )
+
+
+def _pergunta_cota_trivial(
+    modelo: ModeloInstanciado, valor: float, criterio: str | None, tolerancia: float
+) -> str | None:
+    """Pergunta ao usuário se o valor coincide com uma cota trivial; senão, ``None``.
+
+    A cota "favorável" (custo mínimo sem restrição nenhuma) sugere exigência
+    faltante; a "desfavorável" (lucro máximo com tudo no mínimo), exigência
+    entendida ao contrário. A pergunta fala do resultado, e nunca da
+    formulação (cap. 3, Interpretador).
+    """
+    trivial = intervalo_do_objetivo(modelo, limites_dos_dominios(modelo))
+    minimizar = modelo.objetivo.sentido is Sentido.MINIMIZAR
+    favoravel, desfavoravel = (
+        (trivial.inferior, trivial.superior) if minimizar else (trivial.superior, trivial.inferior)
+    )
+    alvo = f"«{criterio}»" if criterio else "o objetivo"
+    abertura = f"Com as exigências informadas, o melhor resultado para {alvo} é {valor:g}"
+    if math.isfinite(favoravel) and _proximos(valor, favoravel, tolerancia):
+        return (
+            f"{abertura}, o mesmo que se obteria sem exigência nenhuma. Isso costuma indicar "
+            "que falta alguma exigência, como uma quantidade mínima a atender. Esse resultado "
+            "faz sentido para a sua operação?"
+        )
+    if math.isfinite(desfavoravel) and _proximos(valor, desfavoravel, tolerancia):
+        return (
+            f"{abertura}, o mesmo que se obteria deixando todas as decisões no mínimo (por "
+            "exemplo, sem produzir nada). Isso costuma indicar que alguma exigência foi "
+            "entendida ao contrário. Esse resultado faz sentido para a sua operação?"
+        )
+    return None
 
 
 def _violacoes(
@@ -129,5 +170,16 @@ def _numero(valor: float) -> str:
     return "-∞" if valor == -math.inf else "+∞" if valor == math.inf else f"{valor:g}"
 
 
-def _verificacao(aprovada: bool, mensagem: str, elementos: tuple[str, ...] = ()) -> Verificacao:
-    return Verificacao(sinal=Sinal.S5, aprovada=aprovada, mensagem=mensagem, elementos=elementos)
+def _verificacao(
+    aprovada: bool,
+    mensagem: str,
+    elementos: tuple[str, ...] = (),
+    confirmacao: str | None = None,
+) -> Verificacao:
+    return Verificacao(
+        sinal=Sinal.S5,
+        aprovada=aprovada,
+        mensagem=mensagem,
+        elementos=elementos,
+        confirmacao=confirmacao,
+    )
