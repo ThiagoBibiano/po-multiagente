@@ -96,6 +96,7 @@ class _Checador:
     def __init__(self, ir: ModeloIR) -> None:
         self._ir = ir
         self._conjuntos = {c.id for c in ir.conjuntos}
+        self._pais = {c.id: c.subconjunto_de for c in ir.conjuntos}
         self._variaveis = {v.id for v in ir.variaveis}
         self._assinaturas = {p.id: p.indices for p in ir.parametros} | {
             v.id: v.indices for v in ir.variaveis
@@ -228,13 +229,22 @@ class _Checador:
                         f"{texto(referencia)!r}: o índice {indice.nome!r} não está ligado por "
                         "para_todo nem por somatório"
                     )
-                elif ambiente[indice.nome] != conjunto:
+                elif not self._contido(ambiente[indice.nome], conjunto):
                     self._erro(
                         f"{texto(referencia)!r}: o índice {indice.nome!r} percorre "
                         f"{ambiente[indice.nome]}, mas a posição {posicao} de {nome} espera "
                         f"{conjunto}"
                     )
         return 1 if nome in self._variaveis else 0
+
+    def _contido(self, conjunto: str, pai: str) -> bool:
+        """Indica se ``conjunto`` é ``pai`` ou, por ``subconjunto_de``, está contido nele."""
+        atual: str | None = conjunto
+        while atual is not None:
+            if atual == pai:
+                return True
+            atual = self._pais.get(atual)
+        return False
 
     def _erro(self, mensagem: str) -> None:
         self.erros.append(ErroModelo(self._elemento, mensagem))

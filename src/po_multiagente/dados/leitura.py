@@ -330,6 +330,23 @@ def texto_celula(valor: Celula) -> str:
     return str(valor)
 
 
+def celula_igual(celula: Celula, texto: str) -> bool:
+    """Compara uma célula com um valor escrito como texto, conforme o tipo da célula.
+
+    Booleanos aceitam as grafias de ``_ler_booleano`` ("Sim", "não", "true"...);
+    números aceitam vírgula ou ponto decimal; os demais tipos comparam o texto
+    canônico de ``texto_celula``.
+    """
+    if isinstance(celula, bool):
+        return _ler_booleano(texto.strip()) is celula
+    if isinstance(celula, int | float):
+        try:
+            return float(texto.strip().replace(",", ".")) == float(celula)
+        except ValueError:
+            return False
+    return texto_celula(celula) == texto.strip()
+
+
 def _tem_valor(linha: Sequence[object]) -> bool:
     return any(c is not None and str(c).strip() for c in linha)
 

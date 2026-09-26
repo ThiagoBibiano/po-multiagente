@@ -2,7 +2,7 @@ import pytest
 
 from po_multiagente.dominio import ModeloIR, Sentido, TipoVariavel
 from po_multiagente.modelo import ErroInstanciacao, Relacao, compilar, instanciar
-from tests.construtores import instanciado, modelo, restricao, variavel
+from tests.construtores import conjunto, instanciado, modelo, restricao, variavel
 
 MEMBROS = {"PRODUTOS": ("Mesa", "Cadeira")}
 VALORES: dict[str, dict[tuple[str, ...], float]] = {
@@ -130,3 +130,15 @@ def test_membros_com_virgula_geram_nomes_ambiguos() -> None:
     )
     with pytest.raises(ErroInstanciacao, match="mesmo nome"):
         instanciado(ir, {"A": ("1", "1,2"), "B": ("2,3", "3")})
+
+
+def test_membro_de_subconjunto_fora_do_pai() -> None:
+    ir = modelo(
+        "sum(x[p] for p in P)",
+        restricao("r", "sum(x[e] for e in E) <= 1"),
+        conjuntos=(conjunto("P"), conjunto("E").model_copy(update={"subconjunto_de": "P"})),
+        variaveis=(variavel("x", "P"),),
+    )
+    assert len(instanciado(ir, {"P": ("A", "B"), "E": ("A",)}).restricoes) == 1
+    with pytest.raises(ErroInstanciacao, match="E: membros fora de P: Z"):
+        instanciado(ir, {"P": ("A", "B"), "E": ("A", "Z")})

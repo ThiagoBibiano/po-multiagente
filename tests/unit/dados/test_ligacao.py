@@ -204,3 +204,18 @@ def test_escalar_filtrado_sem_valor_e_faltante(tmp_path: Path) -> None:
     with pytest.raises(ErroDados, match="não tem valor") as erro:
         valores(t, "disponivel", (), (Filtro(coluna="recurso", valor="horas"),))
     assert erro.value.motivo is MotivoTratamento.FALTANTE
+
+
+@pytest.mark.parametrize(
+    ("texto", "coluna", "valor"),
+    [
+        ("item;animal;v\nA;Sim;1\nB;Não;2\n", "animal", "Sim"),
+        ("item;fator;v\nA;0,5;1\nB;1,5;2\n", "fator", "0.5"),
+        ("item;lote;v\nA;10;1\nB;20;2\n", "lote", "10"),
+    ],
+)
+def test_filtro_compara_pelo_tipo_da_celula(
+    tmp_path: Path, texto: str, coluna: str, valor: str
+) -> None:
+    t = tabela(tmp_path, texto)
+    assert valores(t, "v", (), (Filtro(coluna=coluna, valor=valor),)) == {(): 1.0}

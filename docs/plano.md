@@ -174,7 +174,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 |---|---|---|---|
 | F0 Fundação | Três repositórios, ferramentas, CI, esqueleto, `dominio`, ADR-001 a ADR-010, workspace e `additionalDirectories` | Não | Concluída |
 | F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Concluída, exceto o piloto (seção 10) |
-| F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Em andamento: ferramenta pronta, 3/36 instâncias |
+| F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Concluída: 36/36 válidas |
 | F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Pendente; calibrada na partição de ajuste da F1b |
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
 | F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Pendente |
@@ -197,6 +197,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | Não linearidade (produto de variáveis, divisão por variável) é erro de compilação, e não sinal do Validador | O modelo não chega ao solver; pela ADR-008, volta ao Modelador igual nas duas configurações |
 | S1 localiza a causa: famílias de restrições incompatíveis (filtro de deleção) ou variáveis sem limite | O CBC não fornece IIS; sem localização, o S1 não atende ao princípio de "localizar" do cap. 3 |
 | S5 = viabilidade da solução conferida com os dados + **pergunta ao usuário** na cota trivial | ADR-011 |
+| `Origem.filtros`, `Conjunto.subconjunto_de`, `Variavel.requisitos`, fontes em várias pastas | Lacunas encontradas ao montar a calibração (tabelas longas, subconjuntos, requisito atendido pelo domínio, arquivos tratados) |
 | Constantes na expressão (`<= 200`) são aceitas e adotam a unidade do outro lado | Ver ponto em aberto 1 |
 | `pulp>=3.3,<4` | O PuLP 4 remove o CBC 2.10.3 embutido (ADR-006) |
 

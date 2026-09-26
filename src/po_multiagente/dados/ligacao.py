@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from po_multiagente.dados.erros import ErroDados, ErroLigacao
 from po_multiagente.dados.fontes import Fontes
-from po_multiagente.dados.leitura import Celula, Tabela, texto_celula
+from po_multiagente.dados.leitura import Celula, Tabela, celula_igual, texto_celula
 from po_multiagente.dominio import Especificacao, Filtro, ModeloIR, MotivoTratamento
 
 Chave = tuple[str, ...]
@@ -184,9 +184,7 @@ def _linhas_filtradas(tabela: Tabela, filtros: Sequence[Filtro]) -> frozenset[in
     selecionadas = frozenset(range(len(tabela.linhas)))
     for filtro in filtros:
         celulas = tabela.valores(filtro.coluna)
-        selecionadas = frozenset(
-            i for i in selecionadas if texto_celula(celulas[i]) == filtro.valor
-        )
+        selecionadas = frozenset(i for i in selecionadas if celula_igual(celulas[i], filtro.valor))
         if not selecionadas:
             raise ErroDados(
                 f"Nenhuma linha de {tabela.nome!r} tem {filtro.coluna!r} igual a {filtro.valor!r}",

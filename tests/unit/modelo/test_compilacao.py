@@ -1,8 +1,9 @@
 import pytest
+from pydantic import ValidationError
 
 from po_multiagente.dominio import ModeloIR, Restricao, TipoVariavel
 from po_multiagente.modelo import ErroCompilacao, compilar
-from tests.construtores import modelo, restricao, variavel
+from tests.construtores import conjunto, modelo, restricao, variavel
 
 
 def producao(objetivo: str, *restricoes: Restricao) -> ModeloIR:
@@ -94,3 +95,31 @@ def test_nome_reservado_e_rejeitado() -> None:
 
 def test_membro_fixo_nao_e_checado_na_compilacao() -> None:
     compilar(producao("x['Mesa']"))
+
+
+def test_subconjunto_ocupa_posicao_do_pai() -> None:
+    ir = modelo(
+        "sum(x[p] for p in PRODUTOS)",
+        restricao("so_alguns", "sum(x[e] for e in ESPECIAIS) <= 1"),
+        conjuntos=(
+            conjunto("PRODUTOS"),
+            conjunto("ESPECIAIS").model_copy(update={"subconjunto_de": "PRODUTOS"}),
+        ),
+        variaveis=(variavel("x", "PRODUTOS"),),
+    )
+    compilar(ir)
+    sem_declaracao = ir.model_copy(
+        update={"conjuntos": (conjunto("PRODUTOS"), conjunto("ESPECIAIS"))}
+    )
+    assert "percorre ESPECIAIS, mas a posição 1 de x espera PRODUTOS" in erros(sem_declaracao)[0]
+
+
+def test_subconjunto_ciclico_e_rejeitado() -> None:
+    with pytest.raises(ValidationError, match="subconjunto de si mesmo"):
+        modelo(
+            "x",
+            conjuntos=(
+                conjunto("A").model_copy(update={"subconjunto_de": "B"}),
+                conjunto("B").model_copy(update={"subconjunto_de": "A"}),
+            ),
+        )

@@ -188,6 +188,21 @@ class _Avaliador:
             else:
                 self._membros[conjunto.id] = tuple(conjuntos[conjunto.id])
             self._conjuntos_membros[conjunto.id] = frozenset(self._membros[conjunto.id])
+        for conjunto in compilado.ir.conjuntos:
+            if conjunto.subconjunto_de is None:
+                continue
+            fora = [
+                m
+                for m in self._membros[conjunto.id]
+                if m not in self._conjuntos_membros[conjunto.subconjunto_de]
+            ]
+            if fora:
+                self.erros.append(
+                    ErroModelo(
+                        conjunto.id,
+                        f"membros fora de {conjunto.subconjunto_de}: {', '.join(fora)}",
+                    )
+                )
 
     def variaveis(self) -> tuple[VariavelInstanciada, ...]:
         instancias = []

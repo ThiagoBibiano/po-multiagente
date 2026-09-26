@@ -36,11 +36,17 @@ class TipoVariavel(StrEnum):
 
 
 class Conjunto(ObjetoDominio):
-    """Conjunto de índices; os membros são os valores distintos da coluna de origem."""
+    """Conjunto de índices; os membros são os valores distintos da coluna de origem.
+
+    ``subconjunto_de`` declara que todo membro pertence a outro conjunto, como
+    as farinhas de origem animal entre todas as farinhas: um índice que
+    percorre o subconjunto pode ocupar a posição que espera o conjunto-pai.
+    """
 
     id: Identificador
     descricao: TextoNaoVazio
     origem: Origem
+    subconjunto_de: Identificador | None = None
 
 
 class ParametroModelo(ObjetoDominio):
@@ -139,6 +145,7 @@ class ModeloIR(ObjetoDominio):
         )
         exigir_declarados(
             chain(
+                (c.subconjunto_de for c in self.conjuntos if c.subconjunto_de),
                 chain.from_iterable(p.indices for p in self.parametros),
                 chain.from_iterable(v.indices for v in self.variaveis),
                 (q.conjunto for r in self.restricoes for q in r.para_todo),
@@ -146,4 +153,16 @@ class ModeloIR(ObjetoDominio):
             (c.id for c in self.conjuntos),
             "Conjuntos",
         )
+        _exigir_hierarquia_sem_ciclo(self.conjuntos)
         return self
+
+
+def _exigir_hierarquia_sem_ciclo(conjuntos: tuple[Conjunto, ...]) -> None:
+    pais = {c.id: c.subconjunto_de for c in conjuntos}
+    for inicio, pai in pais.items():
+        vistos, atual = {inicio}, pai
+        while atual is not None:
+            if atual in vistos:
+                raise ValueError(f"Conjunto {inicio} é subconjunto de si mesmo")
+            vistos.add(atual)
+            atual = pais.get(atual)
