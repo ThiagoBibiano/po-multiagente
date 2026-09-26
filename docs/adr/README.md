@@ -15,3 +15,5 @@ Formato curto baseado no [MADR](https://adr.github.io/madr/): contexto, decisão
 | [ADR-009](009-tres-repositorios.md) | Três repositórios com fluxo de mão única | Aceita |
 | [ADR-010](010-camadas.md) | Arquitetura em camadas verificada por contratos | Aceita |
 | [ADR-011](011-confirmacao-com-usuario.md) | Resultado suspeito vira pergunta ao usuário | Aceita (experimento em aberto) |
+| [ADR-012](012-parametros-de-inferencia.md) | Parâmetros de inferência do gpt-6-luna | Aceita |
+| [ADR-013](013-numeros-por-marcador.md) | O Explicador só escreve números por marcador | Aceita |

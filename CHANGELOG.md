@@ -29,5 +29,11 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   (esquemas, compilação, ligação, sinais, valor objetivo ou status esperado).
 - `Origem.filtros` (célula de tabela longa), `Conjunto.subconjunto_de`,
   `Variavel.requisitos` e fontes em vários diretórios.
+- Agentes e orquestração (F2): porta de LLM com adaptador para a API de
+  Respostas (gpt-6-luna), esquema estrito derivado do domínio, gravação e
+  reprodução de chamadas; Interpretador, Modelador, Gerador-Executor,
+  Validador e Explicador; grafo LangGraph com e sem Validador, interrupções
+  para tratamento de dados e perguntas ao usuário; comando `calibrar`, com
+  respondedor simulado e métricas dos critérios 2 e 3.
 - `Verificacao.confirmacao`: o S5 pergunta ao usuário, em vez de reprovar,
   quando o valor objetivo coincide com uma cota trivial (ADR-011).

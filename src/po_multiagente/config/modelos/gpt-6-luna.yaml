@@ -1,0 +1,18 @@
+# Perfil conferido na documentação da OpenAI em 26/09/2026
+# (developers.openai.com/api/docs/models/gpt-6-luna e guides/latest-model).
+id: gpt-6-luna
+provedor: openai
+api: responses
+modelo: gpt-6-luna
+# Modelo de raciocínio: esforço none, low, medium (padrão), high, xhigh, max.
+esforco_raciocinio: low
+# Com esforço diferente de "none", a API rejeita temperature e top_p; o
+# manifesto registra o que foi efetivamente aplicado.
+temperatura: null
+max_saida_tokens: 32000
+saida_estruturada_estrita: true
+aceita_seed: false
+precos_usd_por_milhao:
+  entrada: 0.10
+  entrada_em_cache: 0.01
+  saida: 0.50

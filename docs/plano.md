@@ -13,7 +13,7 @@ A interface é uma camada fina por cima do núcleo.
 |---|---|---|
 | D1 | Interface em **Gradio** | Aprovada |
 | D2 | Gerador-Executor é um **compilador determinístico**; o formato da representação intermediária é livre (seção 3) | Aprovada |
-| D3 | LLM **agnóstico**; candidatos gpt-6-luna (OpenAI) e DeepSeek-V4.1-Flash (DeepSeek) | Aprovada |
+| D3 | LLM **agnóstico**; modelo escolhido: **gpt-6-luna** (OpenAI), com parâmetros na ADR-012 | Aprovada |
 | D4 | **Código público**; conjunto-teste **privado até a defesa** | Aprovada |
 | D5 | Idioma dos identificadores: **português sem acento** (`quadro_especificacao`) | Aprovada |
 | D6 | **PuLP/CBC por ora**, com camada de solver agnóstica | Aprovada |
@@ -73,7 +73,8 @@ po-multiagente/
 **Camadas** (import-linter, ADR-010), de cima para baixo; cada uma só importa as de baixo, e as separadas por `|` não se importam entre si:
 
 ```
-interface | cli | experimento
+cli
+interface | experimento
 orquestracao | avaliacao
 agentes
 validacao | rastreabilidade
@@ -175,12 +176,14 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | F0 Fundação | Três repositórios, ferramentas, CI, esqueleto, `dominio`, ADR-001 a ADR-010, workspace e `additionalDirectories` | Não | Concluída |
 | F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Concluída, exceto o piloto (seção 10) |
 | F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Concluída: 36/36 válidas |
-| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Pendente; calibrada na partição de ajuste da F1b |
+| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Implementada; arnês 72/72 com roteiro do gabarito. Falta a calibração com o modelo real (chave da API) |
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
 | F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Pendente |
 | F5 Conjunto-teste (paralelo desde F1) | Formato, `validar-instancia`, 24 instâncias, revisão cruzada | Não | Pendente |
 | F6 Avaliação e experimento | Critérios 1–4, McNemar, taxonomia, executor, exportação `.tex` | Sim | Pendente |
 | F7 Congelamento | v1.0 + DOI → experimento → `importa_resultados.py` → TG2 | — | Pendente |
+
+**Meta de versão efetiva (aprovada em 26/09/2026):** na partição de conferência, ≥ 80% de ponta a ponta (critério 2) e ≥ 70% de solução correta (critério 3).
 
 **Ordem de trabalho (decidida em 26/09/2026):** F1 → F1b → F2, calibrada no conjunto de calibração → F4 mínima (interface) → teste com o usuário → F3, F5 e F6. O conjunto-teste só é executado depois que os prompts forem congelados.
 

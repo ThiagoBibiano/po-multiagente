@@ -1,15 +1,19 @@
 """Interface de linha de comando ``po-multiagente``.
 
-Subcomandos disponíveis: ``validar-instancia``. Os subcomandos ``executar``,
-``experimento`` e ``avaliar`` entram nas fases que os implementam.
+Subcomandos disponíveis: ``validar-instancia`` e ``calibrar``. Os
+subcomandos ``executar``, ``experimento`` e ``avaliar`` entram nas fases que
+os implementam.
 """
 
 import argparse
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 from po_multiagente import __version__
 from po_multiagente.avaliacao.instancia import RelatorioInstancia, validar_instancia
+from po_multiagente.config import ConfiguracaoExecucao
+from po_multiagente.experimento.calibracao import calibrar, pastas_da_particao, resumo
 
 
 def construir_parser() -> argparse.ArgumentParser:
@@ -29,6 +33,25 @@ def construir_parser() -> argparse.ArgumentParser:
     validar.add_argument(
         "pastas", nargs="+", type=Path, help="pastas de instância, ou pastas que as contêm"
     )
+    calibrar = subcomandos.add_parser(
+        "calibrar", help="roda o fluxo completo nas instâncias de um conjunto e mede os critérios"
+    )
+    calibrar.add_argument("conjunto", type=Path, help="pasta com as instâncias")
+    calibrar.add_argument(
+        "--particao", choices=("ajuste", "conferencia", "todas"), default="ajuste"
+    )
+    calibrar.add_argument("--instancia", action="append", default=[], help="só esta instância")
+    calibrar.add_argument(
+        "--modo",
+        choices=("chamar", "gravar", "reproduzir", "roteiro"),
+        default="gravar",
+        help="chamar o modelo, gravar as chamadas, reproduzir gravações ou usar o gabarito",
+    )
+    calibrar.add_argument(
+        "--configuracao", choices=("com", "sem", "ambas"), default="com", help="Validador"
+    )
+    calibrar.add_argument("--repeticoes", type=int, default=1)
+    calibrar.add_argument("--saida", type=Path, default=Path("saidas/calibracao"))
     return parser
 
 
@@ -50,7 +73,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         validas = sum(r.valida for r in relatorios)
         print(f"\n{validas}/{len(relatorios)} instância(s) válida(s)")
         return 0 if validas == len(relatorios) else 1
+    if argumentos.comando == "calibrar":
+        return _calibrar(argumentos)
     parser.print_help()
+    return 0
+
+
+def _calibrar(argumentos: argparse.Namespace) -> int:
+    base = ConfiguracaoExecucao()
+    configuracoes = {
+        "com": [base],
+        "sem": [base.model_copy(update={"validador": False})],
+        "ambas": [base, base.model_copy(update={"validador": False})],
+    }[argumentos.configuracao]
+    pastas = pastas_da_particao(argumentos.conjunto, argumentos.particao, argumentos.instancia)
+    carimbo = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    medidas = calibrar(
+        pastas, argumentos.saida / carimbo, argumentos.modo, configuracoes, argumentos.repeticoes
+    )
+    print("\n" + resumo(medidas))
     return 0
 
 

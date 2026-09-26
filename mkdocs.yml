@@ -28,3 +28,5 @@ nav:
       - adr/009-tres-repositorios.md
       - adr/010-camadas.md
       - adr/011-confirmacao-com-usuario.md
+      - adr/012-parametros-de-inferencia.md
+      - adr/013-numeros-por-marcador.md

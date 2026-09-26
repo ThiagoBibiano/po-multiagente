@@ -7,6 +7,7 @@ execução (R5) e servem de esquema para a saída estruturada dos agentes.
 
 from po_multiagente.dominio._base import Identificador, IdRequisito, ObjetoDominio
 from po_multiagente.dominio.especificacao import Especificacao, Parametro, Sentido
+from po_multiagente.dominio.explicacao import Explicacao, ItemFicha
 from po_multiagente.dominio.fontes import Coluna, Filtro, FonteDados, Origem, TipoColuna
 from po_multiagente.dominio.modelo_ir import (
     Conjunto,
@@ -28,11 +29,13 @@ __all__ = [
     "Coluna",
     "Conjunto",
     "Especificacao",
+    "Explicacao",
     "Filtro",
     "FonteDados",
     "IdRequisito",
     "IdentificacaoSolver",
     "Identificador",
+    "ItemFicha",
     "ModeloIR",
     "MotivoTratamento",
     "Objetivo",

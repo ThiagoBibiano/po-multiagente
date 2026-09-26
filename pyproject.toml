@@ -22,7 +22,9 @@ classifiers = [
 # Dependências entram na fase que as usa (docs/plano.md, seção 9): o pacote
 # só declara o que importa de fato.
 dependencies = [
+    "langgraph>=1.2,<2",
     "lark>=1.2,<2",
+    "openai>=3.19,<4",
     "openpyxl>=3.1,<4",
     # <4: o PuLP 4 remove o CBC 2.10.3 embutido, versão fixada no TG (ADR-006).
     "pulp>=3.3,<4",
@@ -161,7 +163,8 @@ name = "Camadas: cada camada só importa as de baixo"
 type = "layers"
 containers = ["po_multiagente"]
 layers = [
-    "interface | cli | experimento",
+    "cli",
+    "interface | experimento",
     "orquestracao | avaliacao",
     "agentes",
     "validacao | rastreabilidade",
