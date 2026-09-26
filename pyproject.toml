@@ -21,7 +21,13 @@ classifiers = [
 ]
 # Dependências entram na fase que as usa (docs/plano.md, seção 9): o pacote
 # só declara o que importa de fato.
-dependencies = ["pydantic>=2.7,<3"]
+dependencies = [
+    "lark>=1.2,<2",
+    "openpyxl>=3.1,<4",
+    # <4: o PuLP 4 remove o CBC 2.10.3 embutido, versão fixada no TG (ADR-006).
+    "pulp>=3.3,<4",
+    "pydantic>=2.7,<3",
+]
 
 [project.urls]
 Repository = "https://github.com/ThiagoBibiano/po-multiagente"
@@ -29,6 +35,11 @@ Changelog = "https://github.com/ThiagoBibiano/po-multiagente/blob/main/CHANGELOG
 
 [project.scripts]
 po-multiagente = "po_multiagente.cli:main"
+
+# Adaptadores de solver (ADR-006): um solver novo é um arquivo de adaptador e
+# uma linha aqui.
+[project.entry-points."po_multiagente.solvers"]
+pulp = "po_multiagente.solver.adaptador_pulp:BackendPulp"
 
 [dependency-groups]
 dev = [
@@ -39,6 +50,7 @@ dev = [
     "pytest>=8.2",
     "pytest-cov>=5.0",
     "ruff>=0.6",
+    "types-openpyxl>=3.1",
 ]
 docs = ["mkdocs-material>=9.5"]
 
@@ -77,6 +89,10 @@ select = [
 ignore = [
     # Texto em português usa travessões, "×" e aspas tipográficas de propósito.
     "RUF001", "RUF002", "RUF003",
+    # Exceções em português levam o prefixo "Erro" (ADR-005), e não o sufixo "Error".
+    "N818",
+    # Estilo Google: os argumentos do construtor ficam na docstring da classe.
+    "D107",
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -98,6 +114,11 @@ warn_unreachable = true
 plugins = ["pydantic.mypy"]
 mypy_path = "src"
 files = ["src", "tests"]
+
+# O PuLP não publica anotações de tipo; só o adaptador o importa.
+[[tool.mypy.overrides]]
+module = ["pulp", "pulp.*"]
+ignore_missing_imports = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
