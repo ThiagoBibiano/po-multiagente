@@ -14,7 +14,7 @@ class _Estrito(BaseModel):
 
 
 class Precos(_Estrito):
-    """Preços em dólares por milhão de tokens."""
+    """Preços por milhão de tokens, na moeda do perfil."""
 
     entrada: NonNegativeFloat
     entrada_em_cache: NonNegativeFloat
@@ -30,15 +30,18 @@ class PerfilModelo(_Estrito):
     """
 
     id: str
-    provedor: Literal["openai"]
+    provedor: Literal["openai", "maritaca"]
     api: Literal["responses"]
     modelo: str
+    url_base: str | None = Field(default=None, description="None: endpoint da OpenAI")
+    variavel_chave: str = "OPENAI_API_KEY"
     esforco_raciocinio: EsforcoRaciocinio | None = None
     temperatura: float | None = None
     max_saida_tokens: PositiveInt
     saida_estruturada_estrita: bool
     aceita_seed: bool
-    precos_usd_por_milhao: Precos
+    moeda: Literal["USD", "BRL"]
+    precos_por_milhao: Precos
 
     @model_validator(mode="after")
     def _temperatura_so_sem_raciocinio(self) -> "PerfilModelo":
@@ -48,9 +51,9 @@ class PerfilModelo(_Estrito):
             )
         return self
 
-    def custo_usd(self, entrada: int, entrada_em_cache: int, saida: int) -> float:
-        """Custo de uma chamada; os tokens em cache estão contidos em ``entrada``."""
-        precos = self.precos_usd_por_milhao
+    def custo(self, entrada: int, entrada_em_cache: int, saida: int) -> float:
+        """Custo de uma chamada, em ``moeda``; os tokens em cache estão contidos em ``entrada``."""
+        precos = self.precos_por_milhao
         return (
             (entrada - entrada_em_cache) * precos.entrada
             + entrada_em_cache * precos.entrada_em_cache

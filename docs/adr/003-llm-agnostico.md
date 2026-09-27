@@ -25,3 +25,11 @@ fixos e registrados.
   modelos ignoram `temperature`.
 - A saída estruturada estrita da OpenAI exige todos os campos como
   obrigatórios; o adaptador deriva o esquema enviado a partir do domínio.
+
+## Adendo (2026-09-26)
+
+A Maritaca implementa a API de Respostas com saída estruturada estrita
+(conferido na API em 26/09/2026). O adaptador existente serve sem mudança de
+chamada: o perfil passa a declarar `url_base` e `variavel_chave`, e os preços
+ganham `moeda`, pois a Maritaca cobra em reais. O perfil `sabiazinho-4` serve
+a testes iniciais baratos; não substitui o modelo do experimento.

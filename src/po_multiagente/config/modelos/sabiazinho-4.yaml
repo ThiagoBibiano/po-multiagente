@@ -1,0 +1,24 @@
+# Perfil conferido na API e na documentação da Maritaca em 26/09/2026
+# (chat.maritaca.ai/api/models e docs.maritaca.ai/pt/precos). A API é
+# compatível com a de Respostas da OpenAI, com saída estruturada estrita.
+id: sabiazinho-4
+provedor: maritaca
+api: responses
+modelo: sabiazinho-4
+url_base: https://chat.maritaca.ai/api
+variavel_chave: MARITACA_API_KEY
+# Sem raciocínio: a API aceita reasoning.effort, mas não gera tokens de
+# raciocínio; a temperatura é aplicada.
+esforco_raciocinio: null
+temperatura: 0.0
+# Teto do modelo: 32768 tokens de saída; contexto de 128 mil.
+max_saida_tokens: 16000
+saida_estruturada_estrita: true
+aceita_seed: false
+# Preço cheio; das 22h às 6h (BRT), entrada e saída custam 30% menos. O custo
+# registrado usa o preço cheio, então é um teto.
+moeda: BRL
+precos_por_milhao:
+  entrada: 1.00
+  entrada_em_cache: 0.25
+  saida: 4.00

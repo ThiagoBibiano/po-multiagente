@@ -103,6 +103,24 @@ def test_adaptador_exige_chave(monkeypatch: pytest.MonkeyPatch) -> None:
         AdaptadorOpenAI(carregar_perfil("gpt-6-luna"))
 
 
+def test_perfil_da_maritaca_usa_endpoint_e_chave_proprios(monkeypatch: pytest.MonkeyPatch) -> None:
+    perfil = carregar_perfil("sabiazinho-4")
+    monkeypatch.delenv("MARITACA_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "chave-da-openai")
+    with pytest.raises(ErroLLM, match="MARITACA_API_KEY"):
+        AdaptadorOpenAI(perfil)
+    monkeypatch.setenv("MARITACA_API_KEY", "chave-da-maritaca")
+    cliente = AdaptadorOpenAI(perfil)._cliente
+    assert str(cliente.base_url).rstrip("/") == "https://chat.maritaca.ai/api"
+    assert cliente.api_key == "chave-da-maritaca"
+    assert AdaptadorOpenAI(perfil, ClienteFalso([])).parametros() == {  # type: ignore[arg-type]
+        "max_output_tokens": 16000,
+        "temperature": 0.0,
+    }
+    assert perfil.moeda == "BRL"
+    assert perfil.custo(1_000_000, 0, 1_000_000) == pytest.approx(5.0)
+
+
 def test_cassete_grava_e_reproduz(tmp_path: Path) -> None:
     arquivo = tmp_path / "cassete.jsonl"
     real = LLMRoteirizado({"modelador": [{"a": 1}]})

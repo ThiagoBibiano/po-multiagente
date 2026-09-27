@@ -12,7 +12,8 @@ temperatura: null
 max_saida_tokens: 32000
 saida_estruturada_estrita: true
 aceita_seed: false
-precos_usd_por_milhao:
+moeda: USD
+precos_por_milhao:
   entrada: 0.10
   entrada_em_cache: 0.01
   saida: 0.50

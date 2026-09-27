@@ -35,5 +35,9 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   Validador e Explicador; grafo LangGraph com e sem Validador, interrupções
   para tratamento de dados e perguntas ao usuário; comando `calibrar`, com
   respondedor simulado e métricas dos critérios 2 e 3.
+- Perfil `sabiazinho-4` (Maritaca), para testes iniciais de baixo custo: o
+  perfil passa a definir o endpoint (`url_base`), a variável da chave
+  (`variavel_chave`) e a moeda dos preços; `calibrar --perfil` escolhe o
+  modelo. O experimento segue com o gpt-6-luna (ADR-012).
 - `Verificacao.confirmacao`: o S5 pergunta ao usuário, em vez de reprovar,
   quando o valor objetivo coincide com uma cota trivial (ADR-011).

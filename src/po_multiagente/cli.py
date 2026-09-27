@@ -50,6 +50,11 @@ def construir_parser() -> argparse.ArgumentParser:
     calibrar.add_argument(
         "--configuracao", choices=("com", "sem", "ambas"), default="com", help="Validador"
     )
+    calibrar.add_argument(
+        "--perfil",
+        default=ConfiguracaoExecucao().perfil_modelo,
+        help="perfil do modelo de linguagem (config/modelos/<perfil>.yaml)",
+    )
     calibrar.add_argument("--repeticoes", type=int, default=1)
     calibrar.add_argument("--saida", type=Path, default=Path("saidas/calibracao"))
     return parser
@@ -80,7 +85,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _calibrar(argumentos: argparse.Namespace) -> int:
-    base = ConfiguracaoExecucao()
+    base = ConfiguracaoExecucao(perfil_modelo=argumentos.perfil)
     configuracoes = {
         "com": [base],
         "sem": [base.model_copy(update={"validador": False})],

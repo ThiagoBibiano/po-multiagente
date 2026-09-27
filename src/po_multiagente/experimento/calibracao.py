@@ -66,7 +66,8 @@ class Medida:
     chamadas_llm: int
     tokens_entrada: int
     tokens_saida: int
-    custo_usd: float
+    custo: float
+    moeda: str
     duracao_s: float
     eventos: list[dict[str, Any]] = field(default_factory=list)
 
@@ -192,7 +193,8 @@ def medir(
         chamadas_llm=len(chamadas),
         tokens_entrada=entrada,
         tokens_saida=saida,
-        custo_usd=perfil.custo_usd(entrada, cache, saida),
+        custo=perfil.custo(entrada, cache, saida),
+        moeda=perfil.moeda,
         duracao_s=duracao,
         eventos=list(estado.get("eventos", [])),
     )
@@ -238,7 +240,7 @@ def resumo(medidas: Sequence[Medida]) -> str:
     """Tabela em Markdown por configuração e partição."""
     cabecalho = (
         "Configuração", "Partição", "Execuções", "Ponta a ponta", "Correta",
-        "Validador acionado", "Custo (US$)",
+        "Validador acionado", "Custo",
     )  # fmt: skip
     linhas = ["| " + " | ".join(cabecalho) + " |", "|" + "---|" * len(cabecalho)]
     grupos: dict[tuple[str, str], list[Medida]] = {}
@@ -253,7 +255,7 @@ def resumo(medidas: Sequence[Medida]) -> str:
             _pct(sum(m.ponta_a_ponta for m in grupo), n),
             _pct(sum(m.correta for m in grupo), n),
             _pct(sum(m.validador_acionado for m in grupo), n),
-            f"{sum(m.custo_usd for m in grupo):.4f}",
+            f"{grupo[0].moeda} {sum(m.custo for m in grupo):.4f}",
         )
         linhas.append("| " + " | ".join(celulas) + " |")
     falhas = [m for m in medidas if not m.correta]
@@ -274,7 +276,7 @@ def _linha(medida: Medida) -> str:
     return (
         f"{marca} {medida.instancia:48s} {medida.configuracao:14s} {medida.status:14s} "
         f"obtido={medida.valor_obtido} esperado={medida.valor_esperado} "
-        f"it={medida.iteracoes_validador} US${medida.custo_usd:.4f}"
+        f"it={medida.iteracoes_validador} {medida.moeda} {medida.custo:.4f}"
     )
 
 

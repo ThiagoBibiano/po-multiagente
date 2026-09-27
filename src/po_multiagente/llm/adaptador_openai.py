@@ -1,4 +1,4 @@
-"""Adaptador para a API de Respostas da OpenAI, com saída estruturada estrita."""
+"""Adaptador para a API de Respostas (OpenAI e compatíveis), com saída estruturada estrita."""
 
 import os
 import time
@@ -20,16 +20,24 @@ _ERRO_DO_SERVIDOR = 500
 class AdaptadorOpenAI:
     """``LLMPort`` sobre a API de Respostas (``client.responses.create``).
 
+    Serve a qualquer provedor que implemente essa API (a Maritaca, por
+    exemplo): o perfil define o endpoint e a variável de ambiente da chave.
+
     Args:
-        perfil: Perfil do modelo; define esforço de raciocínio, temperatura e preços.
-        cliente: Cliente já configurado; o padrão lê ``OPENAI_API_KEY`` do ambiente.
+        perfil: Perfil do modelo; define endpoint, esforço de raciocínio, temperatura e preços.
+        cliente: Cliente já configurado; o padrão lê a chave de ``perfil.variavel_chave``.
     """
 
     def __init__(self, perfil: PerfilModelo, cliente: OpenAI | None = None) -> None:
-        if cliente is None and not os.environ.get("OPENAI_API_KEY"):
-            raise ErroLLM("Defina OPENAI_API_KEY (no Colab, em Secrets) para chamar o modelo")
         self._perfil = perfil
-        self._cliente = cliente or OpenAI()
+        if cliente is None:
+            chave = os.environ.get(perfil.variavel_chave)
+            if not chave:
+                raise ErroLLM(
+                    f"Defina {perfil.variavel_chave} (no Colab, em Secrets) para chamar o modelo"
+                )
+            cliente = OpenAI(api_key=chave, base_url=perfil.url_base)
+        self._cliente = cliente
 
     @property
     def modelo(self) -> str:
