@@ -17,7 +17,7 @@ from po_multiagente.agentes import (
 )
 from po_multiagente.avaliacao.instancia import carregar_instancia
 from po_multiagente.dados import Fontes
-from po_multiagente.llm import LLMRoteirizado
+from po_multiagente.llm import ErroSaidaForaDoEsquema, LLMRoteirizado, Pedido
 from po_multiagente.modelo import compilar
 from po_multiagente.solver import OpcoesSolver, obter_backend
 from tests.instancias import MODELO, QUADRO, criar_instancia
@@ -76,6 +76,18 @@ def test_modelador_corrige_erro_de_compilacao(instancia: Any) -> None:
     resultado = Modelador(llm).formular(instancia.especificacao, instancia.fontes, Registro())
     assert resultado.tentativas_formato == 2
     assert "não linear" in llm.pedidos["modelador"][1].entrada
+
+
+def test_modelador_trata_recusa_do_provedor_como_erro_de_formato(instancia: Any) -> None:
+    def recusa(_: Pedido) -> dict[str, Any]:
+        raise ErroSaidaForaDoEsquema("[] should be non-empty")
+
+    llm = LLMRoteirizado({"modelador": [recusa, MODELO]})
+    registro = Registro()
+    resultado = Modelador(llm).formular(instancia.especificacao, instancia.fontes, registro)
+    assert resultado.tentativas_formato == 2
+    assert "should be non-empty" in llm.pedidos["modelador"][1].entrada
+    assert "não segue o esquema" in (registro.chamadas[0].erro or "")
 
 
 def executar(instancia: Any) -> Any:

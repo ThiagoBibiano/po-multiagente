@@ -3,8 +3,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import httpx2
 import pytest
-from openai import APIConnectionError
+from openai import APIConnectionError, BadRequestError
 
 from po_multiagente.config import carregar_perfil
 from po_multiagente.dominio import Especificacao, ModeloIR
@@ -12,6 +13,7 @@ from po_multiagente.llm import (
     AdaptadorOpenAI,
     Cassete,
     ErroLLM,
+    ErroSaidaForaDoEsquema,
     LLMRoteirizado,
     Pedido,
     RespostaLLM,
@@ -91,6 +93,16 @@ def test_adaptador_tenta_de_novo_em_falha_de_rede(monkeypatch: pytest.MonkeyPatc
     assert AdaptadorOpenAI(carregar_perfil("gpt-6-luna"), cliente).gerar(PEDIDO).texto  # type: ignore[arg-type]
 
 
+def test_adaptador_distingue_recusa_por_esquema() -> None:
+    requisicao = httpx2.Request("POST", "https://chat.maritaca.ai/api/responses")
+    corpo = {"message": "[] should be non-empty", "code": "model_output_schema_mismatch"}
+    recusa = BadRequestError("400", response=httpx2.Response(400, request=requisicao), body=corpo)
+    cliente = ClienteFalso([recusa])
+    with pytest.raises(ErroSaidaForaDoEsquema, match=r"^\[\] should be non-empty$"):
+        AdaptadorOpenAI(carregar_perfil("sabiazinho-4"), cliente).gerar(PEDIDO)  # type: ignore[arg-type]
+    assert len(cliente.chamadas) == 1
+
+
 def test_adaptador_rejeita_resposta_incompleta() -> None:
     cliente = ClienteFalso([resposta_api(status="incomplete")])
     with pytest.raises(ErroLLM, match="incomplete"):
@@ -132,6 +144,18 @@ def test_cassete_grava_e_reproduz(tmp_path: Path) -> None:
         Cassete(arquivo, "reproduzir", modelo="roteirizado").gerar(outro)
     with pytest.raises(ValueError, match="modelo real"):
         Cassete(arquivo, "gravar")
+
+
+def test_cassete_grava_e_reproduz_recusa(tmp_path: Path) -> None:
+    def recusa(_: Pedido) -> dict[str, Any]:
+        raise ErroSaidaForaDoEsquema("fora do esquema")
+
+    arquivo = tmp_path / "cassete.jsonl"
+    real = LLMRoteirizado({"modelador": [recusa]})
+    with pytest.raises(ErroSaidaForaDoEsquema):
+        Cassete(arquivo, "gravar", real).gerar(PEDIDO)
+    with pytest.raises(ErroSaidaForaDoEsquema, match="fora do esquema"):
+        Cassete(arquivo, "reproduzir", modelo="roteirizado").gerar(PEDIDO)
 
 
 def test_roteiro_esgotado() -> None:

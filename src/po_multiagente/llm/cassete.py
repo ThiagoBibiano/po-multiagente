@@ -11,7 +11,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
 
-from po_multiagente.llm.porta import ErroLLM, LLMPort, Pedido, RespostaLLM, Uso
+from po_multiagente.llm.porta import (
+    ErroLLM,
+    ErroSaidaForaDoEsquema,
+    LLMPort,
+    Pedido,
+    RespostaLLM,
+    Uso,
+)
 
 ModoCassete = Literal["gravar", "reproduzir"]
 
@@ -46,10 +53,13 @@ class Cassete:
         self._modo = modo
         self._interno = interno
         self._modelo = interno.modelo if interno is not None else modelo
-        self._gravadas: dict[str, RespostaLLM] = {}
+        self._gravadas: dict[str, RespostaLLM | ErroSaidaForaDoEsquema] = {}
         if caminho.exists():
             for linha in caminho.read_text(encoding="utf-8").splitlines():
                 registro = json.loads(linha)
+                if "recusa" in registro:
+                    self._gravadas[registro["chave"]] = ErroSaidaForaDoEsquema(registro["recusa"])
+                    continue
                 resposta = registro["resposta"]
                 self._gravadas[registro["chave"]] = RespostaLLM(
                     texto=resposta["texto"],
@@ -66,16 +76,31 @@ class Cassete:
         return self._modelo
 
     def gerar(self, pedido: Pedido) -> RespostaLLM:
-        """Reproduz a resposta gravada ou, no modo gravar, chama e grava."""
+        """Reproduz a resposta gravada ou, no modo gravar, chama e grava.
+
+        A recusa por saída fora do esquema também é gravada e reproduzida:
+        faz parte da execução, como uma resposta.
+        """
         chave = chave_pedido(self._modelo, pedido)
         if chave in self._gravadas:
-            return self._gravadas[chave]
+            gravada = self._gravadas[chave]
+            if isinstance(gravada, ErroSaidaForaDoEsquema):
+                raise gravada
+            return gravada
         if self._modo == "reproduzir" or self._interno is None:
             raise ErroLLM(f"Chamada do agente {pedido.agente} não gravada em {self._caminho.name}")
-        resposta = self._interno.gerar(pedido)
+        registro: dict[str, object] = {"chave": chave, "agente": pedido.agente}
+        try:
+            resposta = self._interno.gerar(pedido)
+        except ErroSaidaForaDoEsquema as recusa:
+            self._gravadas[chave] = recusa
+            self._acrescentar({**registro, "recusa": str(recusa)})
+            raise
         self._gravadas[chave] = resposta
+        self._acrescentar({**registro, "resposta": asdict(resposta)})
+        return resposta
+
+    def _acrescentar(self, registro: dict[str, object]) -> None:
         self._caminho.parent.mkdir(parents=True, exist_ok=True)
         with self._caminho.open("a", encoding="utf-8") as arquivo:
-            registro = {"chave": chave, "agente": pedido.agente, "resposta": asdict(resposta)}
             arquivo.write(json.dumps(registro, ensure_ascii=False) + "\n")
-        return resposta

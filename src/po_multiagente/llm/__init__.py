@@ -8,13 +8,21 @@ roteirizado para testes. Sem LangChain: o LangGraph só orquestra.
 from po_multiagente.llm.adaptador_openai import AdaptadorOpenAI
 from po_multiagente.llm.cassete import Cassete, ModoCassete, chave_pedido
 from po_multiagente.llm.esquema import esquema_estrito
-from po_multiagente.llm.porta import ErroLLM, LLMPort, Pedido, RespostaLLM, Uso
+from po_multiagente.llm.porta import (
+    ErroLLM,
+    ErroSaidaForaDoEsquema,
+    LLMPort,
+    Pedido,
+    RespostaLLM,
+    Uso,
+)
 from po_multiagente.llm.roteirizado import LLMRoteirizado
 
 __all__ = [
     "AdaptadorOpenAI",
     "Cassete",
     "ErroLLM",
+    "ErroSaidaForaDoEsquema",
     "LLMPort",
     "LLMRoteirizado",
     "ModoCassete",

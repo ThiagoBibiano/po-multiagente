@@ -8,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from po_multiagente.dados import Fontes
 from po_multiagente.dominio import TipoColuna
-from po_multiagente.llm import LLMPort, Pedido, Uso, esquema_estrito
+from po_multiagente.llm import ErroSaidaForaDoEsquema, LLMPort, Pedido, Uso, esquema_estrito
 from po_multiagente.prompts import Instrucao
 
 Saida = TypeVar("Saida", bound=BaseModel)
@@ -72,7 +72,8 @@ def gerar_estruturado(
     """Chama o modelo com o esquema estrito de ``saida`` e valida a resposta.
 
     Raises:
-        ErroFormato: Se a resposta não for JSON válido no esquema.
+        ErroFormato: Se a resposta não for JSON válido no esquema, ou se o
+            provedor a recusar por esse motivo.
     """
     pedido = Pedido(
         agente=instrucao.agente,
@@ -81,7 +82,25 @@ def gerar_estruturado(
         nome_esquema=saida.__name__,
         esquema=esquema_estrito(saida),
     )
-    resposta = llm.gerar(pedido)
+    try:
+        resposta = llm.gerar(pedido)
+    except ErroSaidaForaDoEsquema as recusa:
+        motivo = f"A resposta não segue o esquema: {recusa}"
+        registro.chamadas.append(
+            RegistroChamada(
+                agente=instrucao.agente,
+                modelo=llm.modelo,
+                uso=Uso(),
+                parametros={},
+                duracao_s=0.0,
+                gravada=False,
+                instrucao_sha256=instrucao.sha256,
+                entrada=entrada,
+                saida="",
+                erro=motivo,
+            )
+        )
+        raise ErroFormato(motivo) from recusa
     erro: str | None = None
     try:
         return saida.model_validate(json.loads(resposta.texto))

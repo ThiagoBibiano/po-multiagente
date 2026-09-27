@@ -50,6 +50,14 @@ class ErroLLM(Exception):
     """Falha de comunicação, recusa ou resposta incompleta do modelo."""
 
 
+class ErroSaidaForaDoEsquema(ErroLLM):
+    """O provedor conferiu a saída contra o esquema e a recusou.
+
+    Alguns provedores (a Maritaca, por exemplo) validam a saída estrita no
+    servidor e devolvem erro, em vez do texto. É um erro de formato (ADR-008).
+    """
+
+
 @runtime_checkable
 class LLMPort(Protocol):
     """Gera uma resposta estruturada para um pedido."""

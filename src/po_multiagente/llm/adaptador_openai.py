@@ -9,12 +9,13 @@ from openai.types.responses import ResponseTextConfigParam
 from openai.types.shared_params import Reasoning
 
 from po_multiagente.config import PerfilModelo
-from po_multiagente.llm.porta import ErroLLM, Pedido, RespostaLLM, Uso
+from po_multiagente.llm.porta import ErroLLM, ErroSaidaForaDoEsquema, Pedido, RespostaLLM, Uso
 
 TENTATIVAS_REDE = 4
 """Novas tentativas para falhas transitórias (rede, limite de taxa, erro 5xx)."""
 
 _ERRO_DO_SERVIDOR = 500
+_SAIDA_FORA_DO_ESQUEMA = "model_output_schema_mismatch"
 
 
 class AdaptadorOpenAI:
@@ -86,6 +87,8 @@ class AdaptadorOpenAI:
                 if tentativa == TENTATIVAS_REDE - 1:
                     raise ErroLLM(f"Falha de comunicação com o modelo: {erro}") from erro
             except APIStatusError as erro:
+                if erro.code == _SAIDA_FORA_DO_ESQUEMA:
+                    raise ErroSaidaForaDoEsquema(_mensagem(erro)) from erro
                 if erro.status_code < _ERRO_DO_SERVIDOR or tentativa == TENTATIVAS_REDE - 1:
                     raise ErroLLM(f"A API recusou o pedido ({erro.status_code}): {erro}") from erro
             time.sleep(2**tentativa)
@@ -105,3 +108,11 @@ class AdaptadorOpenAI:
             parametros=parametros,
             duracao_s=time.perf_counter() - inicio,
         )
+
+
+def _mensagem(erro: APIStatusError) -> str:
+    """Mensagem do provedor, sem o prefixo do SDK."""
+    corpo = erro.body
+    if isinstance(corpo, dict) and isinstance(corpo.get("message"), str):
+        return str(corpo["message"])
+    return erro.message
