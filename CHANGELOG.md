@@ -45,5 +45,7 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.
+- Prompt do Modelador: `indices` e `para_todo` recebem o `id` do conjunto,
+  nunca o nome do índice, com exemplo.
 - `Verificacao.confirmacao`: o S5 pergunta ao usuário, em vez de reprovar,
   quando o valor objetivo coincide com uma cota trivial (ADR-011).
