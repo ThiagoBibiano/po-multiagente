@@ -54,5 +54,7 @@ def test_exigir_unicos_lista_todos_os_repetidos() -> None:
 
 
 def test_exigir_declarados_lista_todos_os_faltantes() -> None:
-    with pytest.raises(ValueError, match="Itens sem declaração: x, y"):
+    with pytest.raises(ValueError, match=r"Itens sem declaração: x, y \(declarados: a, b\)$"):
         exigir_declarados(["y", "a", "x"], ["a", "b"], "Itens")
+    with pytest.raises(ValueError, match=r"\(nenhum declarado\)$"):
+        exigir_declarados(["x"], [], "Itens")

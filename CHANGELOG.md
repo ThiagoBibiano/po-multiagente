@@ -42,5 +42,8 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Recusa do provedor por saída fora do esquema (a Maritaca confere a saída
   estrita no servidor e devolve erro 400) vira erro de formato, com nova
   tentativa do agente (ADR-008); o cassete grava e reproduz a recusa.
+- Erro de referência não declarada lista também as declaradas (por exemplo,
+  `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
+  nova tentativa do agente saiba com o que substituí-la.
 - `Verificacao.confirmacao`: o S5 pergunta ao usuário, em vez de reprovar,
   quando o valor objetivo coincide com uma cota trivial (ADR-011).
