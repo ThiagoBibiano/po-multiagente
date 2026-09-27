@@ -47,5 +47,7 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   nova tentativa do agente saiba com o que substituí-la.
 - Prompt do Modelador: `indices` e `para_todo` recebem o `id` do conjunto,
   nunca o nome do índice, com exemplo.
+- Prompt do Modelador: tabela do que a linguagem não tem (`if`, funções,
+  pares, `and`) e da forma equivalente em cada caso.
 - `Verificacao.confirmacao`: o S5 pergunta ao usuário, em vez de reprovar,
   quando o valor objetivo coincide com uma cota trivial (ADR-011).

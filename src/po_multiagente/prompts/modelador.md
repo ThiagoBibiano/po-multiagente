@@ -36,6 +36,17 @@ Sintaxe de Python, só com isto:
 - Palavras reservadas: `sum`, `for`, `in`.
 - Uma variável só é ligada a uma decisão sim/não por restrição do tipo `x[i] <= M * y[i]`, com M formado por parâmetros (uma capacidade, uma demanda).
 
+A linguagem não tem `if`, funções (`max`, `min`, `round`, `int`, `zip`), `let`, `and`, `or`, `not`, `in` fora do `for`, pares entre parênteses nem expressão condicional. Use a forma equivalente:
+
+| Em vez de | Escreva |
+|---|---|
+| `for (i, j) in PARES` | `for i in ORIGENS for j in DESTINOS` (cada índice percorre o seu conjunto) |
+| `for m in MESES if m == "Jan"` | o membro fixo: `estoque[p, "Jan"]` |
+| `for i in ITENS if <condição dos dados>` | um subconjunto declarado com `filtros` na origem e `subconjunto_de`, e `for i in SUBCONJUNTO` |
+| `x[i] == round(x[i])` | `tipo: inteira` na variável |
+| `M = max(...)` | M é um parâmetro já existente (uma capacidade, uma oferta) |
+| duas relações ligadas por `and` | duas restrições |
+
 ## Unidades
 
 As unidades de cada termo precisam fechar: dos dois lados de uma restrição e entre termos somados. Escolha as unidades das variáveis para que isso aconteça.
