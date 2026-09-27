@@ -16,6 +16,12 @@ TENTATIVAS_REDE = 4
 
 _ERRO_DO_SERVIDOR = 500
 _SAIDA_FORA_DO_ESQUEMA = "model_output_schema_mismatch"
+_SAIDA_TRUNCADA = "max_tokens_reached"
+TRUNCADA = (
+    "A resposta passou do limite de tokens de saída e ficou incompleta. "
+    "Devolva o objeto completo, sem repetir elementos."
+)
+"""Motivo devolvido ao agente quando a saída é cortada, em vez do texto parcial."""
 
 
 class AdaptadorOpenAI:
@@ -89,11 +95,15 @@ class AdaptadorOpenAI:
             except APIStatusError as erro:
                 if erro.code == _SAIDA_FORA_DO_ESQUEMA:
                     raise ErroSaidaForaDoEsquema(_mensagem(erro)) from erro
+                if erro.code == _SAIDA_TRUNCADA:
+                    raise ErroSaidaForaDoEsquema(TRUNCADA) from erro
                 if erro.status_code < _ERRO_DO_SERVIDOR or tentativa == TENTATIVAS_REDE - 1:
                     raise ErroLLM(f"A API recusou o pedido ({erro.status_code}): {erro}") from erro
             time.sleep(2**tentativa)
+        detalhe = getattr(resposta, "incomplete_details", None)
+        if getattr(detalhe, "reason", None) == "max_output_tokens":
+            raise ErroSaidaForaDoEsquema(TRUNCADA)
         if resposta.status != "completed" or not resposta.output_text:
-            detalhe = getattr(resposta, "incomplete_details", None)
             raise ErroLLM(f"Resposta {resposta.status} do modelo: {detalhe}")
         uso = resposta.usage
         return RespostaLLM(

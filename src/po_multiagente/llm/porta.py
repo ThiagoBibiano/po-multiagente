@@ -51,10 +51,11 @@ class ErroLLM(Exception):
 
 
 class ErroSaidaForaDoEsquema(ErroLLM):
-    """O provedor conferiu a saída contra o esquema e a recusou.
+    """A saída do modelo não serve ao esquema: recusada pelo provedor ou cortada.
 
     Alguns provedores (a Maritaca, por exemplo) validam a saída estrita no
-    servidor e devolvem erro, em vez do texto. É um erro de formato (ADR-008).
+    servidor e devolvem erro, em vez do texto; a saída cortada no limite de
+    tokens também não fecha o esquema. É um erro de formato (ADR-008).
     """
 
 

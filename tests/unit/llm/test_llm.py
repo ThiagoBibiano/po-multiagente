@@ -20,6 +20,7 @@ from po_multiagente.llm import (
     Uso,
     esquema_estrito,
 )
+from po_multiagente.llm.adaptador_openai import TRUNCADA
 
 PEDIDO = Pedido("modelador", "instruções", "entrada", "Saida", {"type": "object"})
 
@@ -60,7 +61,9 @@ class ClienteFalso:
         return resposta
 
 
-def resposta_api(texto: str = '{"ok": 1}', status: str = "completed") -> SimpleNamespace:
+def resposta_api(
+    texto: str = '{"ok": 1}', status: str = "completed", motivo: str | None = None
+) -> SimpleNamespace:
     uso = SimpleNamespace(
         input_tokens=100,
         output_tokens=50,
@@ -68,7 +71,11 @@ def resposta_api(texto: str = '{"ok": 1}', status: str = "completed") -> SimpleN
         output_tokens_details=SimpleNamespace(reasoning_tokens=30),
     )
     return SimpleNamespace(
-        output_text=texto, status=status, usage=uso, model="gpt-6-luna", incomplete_details=None
+        output_text=texto,
+        status=status,
+        usage=uso,
+        model="gpt-6-luna",
+        incomplete_details=SimpleNamespace(reason=motivo) if motivo else None,
     )
 
 
@@ -101,6 +108,24 @@ def test_adaptador_distingue_recusa_por_esquema() -> None:
     with pytest.raises(ErroSaidaForaDoEsquema, match=r"^\[\] should be non-empty$"):
         AdaptadorOpenAI(carregar_perfil("sabiazinho-4"), cliente).gerar(PEDIDO)  # type: ignore[arg-type]
     assert len(cliente.chamadas) == 1
+
+
+@pytest.mark.parametrize("perfil", ["gpt-6-luna", "sabiazinho-4"])
+def test_adaptador_trata_saida_cortada_como_fora_do_esquema(perfil: str) -> None:
+    requisicao = httpx2.Request("POST", "https://chat.maritaca.ai/api/responses")
+    corte = BadRequestError(
+        "400",
+        response=httpx2.Response(400, request=requisicao),
+        body={"message": "truncated: " + "{" * 5000, "code": "max_tokens_reached"},
+    )
+    respostas: dict[str, Any] = {
+        "gpt-6-luna": resposta_api(status="incomplete", motivo="max_output_tokens"),
+        "sabiazinho-4": corte,
+    }
+    cliente = ClienteFalso([respostas[perfil]])
+    with pytest.raises(ErroSaidaForaDoEsquema) as erro:
+        AdaptadorOpenAI(carregar_perfil(perfil), cliente).gerar(PEDIDO)  # type: ignore[arg-type]
+    assert str(erro.value) == TRUNCADA
 
 
 def test_adaptador_rejeita_resposta_incompleta() -> None:

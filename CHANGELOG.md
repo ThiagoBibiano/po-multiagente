@@ -42,6 +42,9 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Recusa do provedor por saída fora do esquema (a Maritaca confere a saída
   estrita no servidor e devolve erro 400) vira erro de formato, com nova
   tentativa do agente (ADR-008); o cassete grava e reproduz a recusa.
+- Saída cortada no limite de tokens (`max_tokens_reached` na Maritaca,
+  `incomplete` por `max_output_tokens` na OpenAI) também vira erro de
+  formato, com motivo curto no lugar do texto parcial.
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.
