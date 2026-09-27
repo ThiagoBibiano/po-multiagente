@@ -7,9 +7,17 @@ em ``config/modelos/*.yaml``) e a configuração de uma execução.
 from po_multiagente.config.perfis import (
     ConfiguracaoExecucao,
     EsforcoRaciocinio,
+    NivelServico,
     PerfilModelo,
     Precos,
     carregar_perfil,
 )
 
-__all__ = ["ConfiguracaoExecucao", "EsforcoRaciocinio", "PerfilModelo", "Precos", "carregar_perfil"]
+__all__ = [
+    "ConfiguracaoExecucao",
+    "EsforcoRaciocinio",
+    "NivelServico",
+    "PerfilModelo",
+    "Precos",
+    "carregar_perfil",
+]

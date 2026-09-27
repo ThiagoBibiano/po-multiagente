@@ -7,6 +7,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveInt, model_validator
 
 EsforcoRaciocinio = Literal["none", "low", "medium", "high", "xhigh", "max"]
+NivelServico = Literal["auto", "default", "flex", "priority"]
 
 
 class _Estrito(BaseModel):
@@ -31,10 +32,13 @@ class PerfilModelo(_Estrito):
 
     id: str
     provedor: Literal["openai", "maritaca"]
-    api: Literal["responses"]
+    api: Literal["responses", "chat"]
     modelo: str
     url_base: str | None = Field(default=None, description="None: endpoint da OpenAI")
     variavel_chave: str = "OPENAI_API_KEY"
+    nivel_servico: NivelServico | None = Field(
+        default=None, description="service_tier; None: o padrão do provedor"
+    )
     esforco_raciocinio: EsforcoRaciocinio | None = None
     temperatura: float | None = None
     max_saida_tokens: PositiveInt

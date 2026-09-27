@@ -33,3 +33,12 @@ A Maritaca implementa a API de Respostas com saída estruturada estrita
 chamada: o perfil passa a declarar `url_base` e `variavel_chave`, e os preços
 ganham `moeda`, pois a Maritaca cobra em reais. O perfil `sabiazinho-4` serve
 a testes iniciais baratos; não substitui o modelo do experimento.
+
+## Adendo (2026-09-27)
+
+O nível flex da Maritaca custa a metade, sujeito a capacidade, e só é
+atendido pela API de Chat Completions: a de Respostas ignora `service_tier`.
+O adaptador passa a falar as duas APIs, escolhidas por `api` no perfil
+(`responses` ou `chat`), com o mesmo tratamento de erros. As duas APIs
+aceitam qualquer valor de `service_tier` sem erro, então o registro de cada
+chamada guarda o nível informado na resposta, e não o pedido.

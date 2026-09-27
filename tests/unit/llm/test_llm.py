@@ -52,6 +52,7 @@ class ClienteFalso:
         self.respostas = respostas
         self.chamadas: list[dict[str, Any]] = []
         self.responses = self
+        self.chat = SimpleNamespace(completions=self)
 
     def create(self, **kwargs: Any) -> Any:
         self.chamadas.append(kwargs)
@@ -126,6 +127,49 @@ def test_adaptador_trata_saida_cortada_como_fora_do_esquema(perfil: str) -> None
     with pytest.raises(ErroSaidaForaDoEsquema) as erro:
         AdaptadorOpenAI(carregar_perfil(perfil), cliente).gerar(PEDIDO)  # type: ignore[arg-type]
     assert str(erro.value) == TRUNCADA
+
+
+def resposta_chat(
+    texto: str | None = '{"ok": 1}', fim: str = "stop", nivel: str | None = "flex"
+) -> SimpleNamespace:
+    uso = SimpleNamespace(
+        prompt_tokens=100,
+        completion_tokens=50,
+        prompt_tokens_details=SimpleNamespace(cached_tokens=20),
+        completion_tokens_details=None,
+    )
+    mensagem = SimpleNamespace(content=texto, refusal=None)
+    return SimpleNamespace(
+        choices=[SimpleNamespace(finish_reason=fim, message=mensagem)],
+        usage=uso,
+        model="sabiazinho-4",
+        service_tier=nivel,
+    )
+
+
+def test_adaptador_chat_pede_flex_e_registra_o_nivel_atendido() -> None:
+    perfil = carregar_perfil("sabiazinho-4-flex")
+    cliente = ClienteFalso([resposta_chat(), resposta_chat(nivel="default")])
+    adaptador = AdaptadorOpenAI(perfil, cliente)  # type: ignore[arg-type]
+    resposta = adaptador.gerar(PEDIDO)
+    chamada = cliente.chamadas[0]
+    assert chamada["service_tier"] == "flex"
+    assert chamada["messages"][0] == {"role": "system", "content": "instruções"}
+    assert chamada["response_format"]["json_schema"]["strict"] is True
+    assert chamada["max_completion_tokens"] == perfil.max_saida_tokens
+    assert "store" not in chamada
+    assert resposta.uso == Uso(entrada=100, entrada_em_cache=20, saida=50, raciocinio=0)
+    assert resposta.parametros["service_tier"] == "flex"
+    assert adaptador.gerar(PEDIDO).parametros["service_tier"] == "default"
+
+
+def test_adaptador_chat_trata_corte_e_resposta_vazia() -> None:
+    perfil = carregar_perfil("sabiazinho-4-flex")
+    cliente = ClienteFalso([resposta_chat(fim="length"), resposta_chat(texto=None)])
+    with pytest.raises(ErroSaidaForaDoEsquema, match="limite de tokens"):
+        AdaptadorOpenAI(perfil, cliente).gerar(PEDIDO)  # type: ignore[arg-type]
+    with pytest.raises(ErroLLM, match="terminada por stop"):
+        AdaptadorOpenAI(perfil, cliente).gerar(PEDIDO)  # type: ignore[arg-type]
 
 
 def test_adaptador_rejeita_resposta_incompleta() -> None:

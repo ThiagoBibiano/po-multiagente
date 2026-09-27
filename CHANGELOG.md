@@ -45,6 +45,9 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Saída cortada no limite de tokens (`max_tokens_reached` na Maritaca,
   `incomplete` por `max_output_tokens` na OpenAI) também vira erro de
   formato, com motivo curto no lugar do texto parcial.
+- API de Chat Completions no adaptador (`api: chat` no perfil) e nível de
+  serviço (`nivel_servico`); perfil `sabiazinho-4-flex`, a metade do preço.
+  Cada chamada registra o nível que o provedor informa ter aplicado.
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.
