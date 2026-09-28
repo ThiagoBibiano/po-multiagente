@@ -51,6 +51,8 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Perfil `gemini-3.5-flash-lite` (Google, endpoint compatível com a OpenAI),
   no nível gratuito; é o perfil padrão e o modelo do experimento (ADR-014),
   no lugar do gpt-6-luna.
+- Prompts congelados após a conferência (28/09/2026): um teste confere o
+  hash de cada um.
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.

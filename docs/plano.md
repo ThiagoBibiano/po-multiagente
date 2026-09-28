@@ -176,7 +176,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | F0 Fundação | Três repositórios, ferramentas, CI, esqueleto, `dominio`, ADR-001 a ADR-010, workspace e `additionalDirectories` | Não | Concluída |
 | F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Concluída, exceto o piloto (seção 10) |
 | F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Concluída: 36/36 válidas |
-| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Calibrada na partição de ajuste (seção 11). Falta a conferência e o congelamento dos prompts |
+| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Concluída: meta atingida na conferência; prompts congelados (seção 11) |
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
 | F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Pendente |
 | F5 Conjunto-teste (paralelo desde F1) | Formato, `validar-instancia`, 24 instâncias, revisão cruzada | Não | Pendente |
@@ -228,6 +228,13 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 **Próximos passos:**
 
 1. ~~Decidir o modelo do experimento.~~ Decidido em 28/09/2026: gemini-3.5-flash-lite, no nível gratuito (ADR-014), perfil padrão.
-2. Rodar a partição de conferência (12 instâncias, com e sem Validador). Se atingir a meta (≥ 80% e ≥ 70%), congelar os prompts.
+2. ~~Rodar a partição de conferência.~~ Feito em 28/09/2026, com o gemini-3.5-flash-lite:
+
+   | Conferência (12) | Ponta a ponta | Corretas |
+   |---|---|---|
+   | Com Validador | 11/12 (92%) | 11/12 (92%) |
+   | Sem Validador | 12/12 (100%) | 10/12 (83%) |
+
+   Meta atingida nas duas configurações. O Validador corrigiu v08 e v12 (valores errados sem ele) e errou na v02 (esgotou as três iterações nos sinais S1 e S2). **Prompts congelados**: os hashes estão em `tests/unit/test_prompts_congelados.py`, e mudar um prompt quebra o teste.
 3. Levar os branches empilhados (F1 → F1b → F2 → PoC) ao `develop` num único PR.
 4. F4 mínima (Gradio no Colab) e teste com o usuário.
