@@ -1,0 +1,25 @@
+# Perfil conferido na API e na documentação do Gemini em 28/09/2026
+# (endpoint compatível com a OpenAI; ai.google.dev/gemini-api/docs/pricing).
+# Usado no nível gratuito para testes: a Google usa esses dados para melhorar
+# os produtos, então só o conjunto de calibração passa por ele, nunca o
+# conjunto-teste.
+id: gemini-3.5-flash-lite
+provedor: google
+api: chat
+modelo: gemini-3.5-flash-lite
+url_base: https://generativelanguage.googleapis.com/v1beta/openai/
+variavel_chave: GEMINI_API_KEY
+# Sem esforço explícito: "none" é recusado (400), e o padrão não gera tokens
+# de raciocínio.
+esforco_raciocinio: null
+temperatura: 0.0
+max_saida_tokens: 16000
+saida_estruturada_estrita: true
+aceita_seed: false
+# Preços do nível pago; no gratuito o custo real é zero, e o registrado é o
+# que a mesma execução custaria pagando.
+moeda: USD
+precos_por_milhao:
+  entrada: 0.30
+  entrada_em_cache: 0.03
+  saida: 2.50

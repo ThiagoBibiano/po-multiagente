@@ -31,7 +31,7 @@ class PerfilModelo(_Estrito):
     """
 
     id: str
-    provedor: Literal["openai", "maritaca"]
+    provedor: Literal["openai", "maritaca", "google"]
     api: Literal["responses", "chat"]
     modelo: str
     url_base: str | None = Field(default=None, description="None: endpoint da OpenAI")

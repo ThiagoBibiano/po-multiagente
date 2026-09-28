@@ -232,6 +232,15 @@ def test_roteiro_esgotado() -> None:
         LLMRoteirizado({}).gerar(PEDIDO)
 
 
+@pytest.mark.parametrize(
+    "nome", sorted(p.stem for p in Path("src/po_multiagente/config/modelos").glob("*.yaml"))
+)
+def test_perfis_distribuidos_carregam(nome: str) -> None:
+    perfil = carregar_perfil(nome)
+    assert perfil.id == nome
+    assert AdaptadorOpenAI(perfil, ClienteFalso([])).parametros()  # type: ignore[arg-type]
+
+
 def test_perfil_rejeita_temperatura_com_raciocinio() -> None:
     perfil = carregar_perfil("gpt-6-luna")
     with pytest.raises(ValueError, match="rejeita temperature"):
