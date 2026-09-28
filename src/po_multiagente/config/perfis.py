@@ -83,7 +83,7 @@ class ConfiguracaoExecucao(_Estrito):
     Só ``validador`` muda entre as duas configurações (Passo 7).
     """
 
-    perfil_modelo: str = "gpt-6-luna"
+    perfil_modelo: str = "gemini-3.5-flash-lite"
     validador: bool = True
     max_iteracoes_validador: PositiveInt = Field(default=3, description="K do cap. 3")
     max_tentativas_formato: PositiveInt = Field(default=3, description="ADR-008")

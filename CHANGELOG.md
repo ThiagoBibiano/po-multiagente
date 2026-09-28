@@ -38,7 +38,7 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Perfil `sabiazinho-4` (Maritaca), para testes iniciais de baixo custo: o
   perfil passa a definir o endpoint (`url_base`), a variável da chave
   (`variavel_chave`) e a moeda dos preços; `calibrar --perfil` escolhe o
-  modelo. O experimento segue com o gpt-6-luna (ADR-012).
+  modelo.
 - Recusa do provedor por saída fora do esquema (a Maritaca confere a saída
   estrita no servidor e devolve erro 400) vira erro de formato, com nova
   tentativa do agente (ADR-008); o cassete grava e reproduz a recusa.
@@ -49,7 +49,8 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   serviço (`nivel_servico`); perfil `sabiazinho-4-flex`, a metade do preço.
   Cada chamada registra o nível que o provedor informa ter aplicado.
 - Perfil `gemini-3.5-flash-lite` (Google, endpoint compatível com a OpenAI),
-  para testes no nível gratuito, só com o conjunto de calibração.
+  no nível gratuito; é o perfil padrão e o modelo do experimento (ADR-014),
+  no lugar do gpt-6-luna.
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.

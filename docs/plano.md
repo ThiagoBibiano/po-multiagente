@@ -13,7 +13,7 @@ A interface é uma camada fina por cima do núcleo.
 |---|---|---|
 | D1 | Interface em **Gradio** | Aprovada |
 | D2 | Gerador-Executor é um **compilador determinístico**; o formato da representação intermediária é livre (seção 3) | Aprovada |
-| D3 | LLM **agnóstico**; modelo escolhido: **gpt-6-luna** (OpenAI), com parâmetros na ADR-012 | Aprovada |
+| D3 | LLM **agnóstico**; modelo escolhido: **gemini-3.5-flash-lite** (Google, nível gratuito), na ADR-014; antes, gpt-6-luna (ADR-012) | Aprovada |
 | D4 | **Código público**; conjunto-teste **privado até a defesa** | Aprovada |
 | D5 | Idioma dos identificadores: **português sem acento** (`quadro_especificacao`) | Aprovada |
 | D6 | **PuLP/CBC por ora**, com camada de solver agnóstica | Aprovada |
@@ -227,7 +227,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 
 **Próximos passos:**
 
-1. Decidir o modelo do experimento. Proposta: gemini-3.5-flash-lite, no nível gratuito, no lugar do gpt-6-luna (ADR-012), por custo zero e 92% no ajuste. A decisão viraria a ADR-014 e o perfil padrão.
+1. ~~Decidir o modelo do experimento.~~ Decidido em 28/09/2026: gemini-3.5-flash-lite, no nível gratuito (ADR-014), perfil padrão.
 2. Rodar a partição de conferência (12 instâncias, com e sem Validador). Se atingir a meta (≥ 80% e ≥ 70%), congelar os prompts.
 3. Levar os branches empilhados (F1 → F1b → F2 → PoC) ao `develop` num único PR.
 4. F4 mínima (Gradio no Colab) e teste com o usuário.

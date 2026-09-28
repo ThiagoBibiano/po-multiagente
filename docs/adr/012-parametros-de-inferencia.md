@@ -1,6 +1,6 @@
 # ADR-012: Parâmetros de inferência do gpt-6-luna
 
-- **Estado:** aceita
+- **Estado:** substituída pela [ADR-014](014-modelo-gemini-flash-lite.md) quanto ao modelo
 - **Data:** 2026-09-26
 
 ## Contexto
