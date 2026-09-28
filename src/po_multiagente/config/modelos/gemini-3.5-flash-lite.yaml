@@ -1,8 +1,7 @@
 # Perfil conferido na API e na documentação do Gemini em 28/09/2026
 # (endpoint compatível com a OpenAI; ai.google.dev/gemini-api/docs/pricing).
-# Usado no nível gratuito para testes: a Google usa esses dados para melhorar
-# os produtos, então só o conjunto de calibração passa por ele, nunca o
-# conjunto-teste.
+# Nível gratuito. Nota: nesse nível a Google usa os dados para melhorar os
+# produtos (aceito pelo autor em 28/09/2026).
 id: gemini-3.5-flash-lite
 provedor: google
 api: chat

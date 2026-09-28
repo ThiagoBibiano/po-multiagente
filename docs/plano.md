@@ -176,7 +176,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | F0 Fundação | Três repositórios, ferramentas, CI, esqueleto, `dominio`, ADR-001 a ADR-010, workspace e `additionalDirectories` | Não | Concluída |
 | F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Concluída, exceto o piloto (seção 10) |
 | F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Concluída: 36/36 válidas |
-| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Implementada; arnês 72/72 com roteiro do gabarito. Falta a calibração com o modelo real (chave da API) |
+| F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Calibrada na partição de ajuste (seção 11). Falta a conferência e o congelamento dos prompts |
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
 | F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Pendente |
 | F5 Conjunto-teste (paralelo desde F1) | Formato, `validar-instancia`, 24 instâncias, revisão cruzada | Não | Pendente |
@@ -209,3 +209,25 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 1. **Constantes da descrição.** Um limite escrito no texto ("200 horas") não tem arquivo nem coluna, e `Origem` exige os dois. Hoje ele entra como número na expressão, sem unidade e sem rastreio. Proposta para a F2: uma origem `descricao` com o trecho citado, conferida por código (o número tem de aparecer literalmente no trecho, e o trecho na descrição).
 2. **Alcance do S5.** Resolvido pela ADR-011: a cota trivial vira pergunta ao usuário, e não reprovação. Continua em aberto como responder a essa pergunta no experimento (F6).
 3. **Piloto como 1ª instância.** Recuperado nos protótipos em Colab (Drive do autor, 28 a 30/07/2026): `piloto_marcenaria`, com mesas e cadeiras, madeira e horas de montagem, margem de 90 e 50, e ótimo inteiro de 4950 (55 mesas e nenhuma cadeira). O mesmo protótipo tem uma variante `hostil_marcenaria` (jargão, unidades divergentes, colunas e linhas irrelevantes, mesmo ótimo) e uma instância de mistura (ração, ótimo de 1420,95). Falta decidir onde essas instâncias entram (ver a proposta de conjunto de desenvolvimento).
+
+## 11. Estado em 28/09/2026
+
+**Calibração na partição de ajuste** (24 instâncias, 1 repetição, com e sem Validador):
+
+| Modelo | Corretas com / sem Validador | Custo da rodada |
+|---|---|---|
+| gemini-3.5-flash-lite (nível gratuito) | 22/24 e 22/24 (92%) | zero (US$ 0,37 no pago) |
+| sabiazinho-4 (Maritaca, flex) | 8/24 e 9/24 | R$ 0,77 |
+| gpt-6-luna | não testado: conta da OpenAI sem créditos | — |
+
+- O sabiazinho travava no Modelador (índices, `if` no somatório, `para_todo` duplicado). Os ajustes de prompt levaram-no de 0 a cerca de 10 acertos, mas a variação entre rodadas iguais é do mesmo tamanho. O Gemini quase não precisou de novas tentativas de formato (1 em 62).
+- O adaptador fala a API de Respostas e a de Chat Completions (`api` no perfil), trata recusa por esquema e saída cortada como erro de formato (ADR-008) e registra o nível de serviço aplicado. Perfis: `gpt-6-luna`, `sabiazinho-4`, `sabiazinho-4-flex` e `gemini-3.5-flash-lite`.
+- Nota: no nível gratuito, a Google usa os dados para melhorar os produtos. O autor aceita isso; o critério é o custo mínimo viável.
+- A a07 (banco) falhou com todos os modelos; convém revisar o enunciado e o gabarito.
+
+**Próximos passos:**
+
+1. Decidir o modelo do experimento. Proposta: gemini-3.5-flash-lite, no nível gratuito, no lugar do gpt-6-luna (ADR-012), por custo zero e 92% no ajuste. A decisão viraria a ADR-014 e o perfil padrão.
+2. Rodar a partição de conferência (12 instâncias, com e sem Validador). Se atingir a meta (≥ 80% e ≥ 70%), congelar os prompts.
+3. Levar os branches empilhados (F1 → F1b → F2 → PoC) ao `develop` num único PR.
+4. F4 mínima (Gradio no Colab) e teste com o usuário.
