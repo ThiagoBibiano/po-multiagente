@@ -90,3 +90,16 @@ def test_resposta_exige_data_com_fuso() -> None:
         respondida_em=datetime(2026, 9, 25, 12, 0, tzinfo=UTC),
     )
     assert resposta.respondida_em.tzinfo is UTC
+
+
+def test_confirmacao_nao_reprova_e_aparece_no_parecer() -> None:
+    pergunta = "O melhor resultado é não produzir nada. Isso faz sentido?"
+    s5 = Verificacao(sinal=Sinal.S5, aprovada=True, mensagem="Cota trivial", confirmacao=pergunta)
+    parecer = ParecerValidador(iteracao=1, verificacoes=(s5,))
+    assert parecer.aprovado
+    assert parecer.confirmacoes == (pergunta,)
+
+
+def test_verificacao_reprovada_nao_pergunta_ao_usuario() -> None:
+    with pytest.raises(ValidationError, match="não pergunta ao usuário"):
+        Verificacao(sinal=Sinal.S5, aprovada=False, mensagem="m", confirmacao="Faz sentido?")

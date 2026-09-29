@@ -14,6 +14,7 @@ markdown_extensions:
 nav:
   - Início: index.md
   - Plano: plano.md
+  - Mini-linguagem: gramatica.md
   - Decisões:
       - adr/README.md
       - adr/001-interface-gradio.md
@@ -26,3 +27,6 @@ nav:
       - adr/008-erros-de-formato.md
       - adr/009-tres-repositorios.md
       - adr/010-camadas.md
+      - adr/011-confirmacao-com-usuario.md
+      - adr/012-parametros-de-inferencia.md
+      - adr/013-numeros-por-marcador.md

@@ -36,7 +36,9 @@ def test_identificador_repetido_entre_categorias_e_rejeitado(modelo: ModeloIR) -
 def test_conjunto_nao_declarado_e_rejeitado(modelo: ModeloIR) -> None:
     dados = modelo.model_dump(mode="json")
     dados["variaveis"][0]["indices"] = ["PRODUTOS", "MESES"]
-    with pytest.raises(ValidationError, match="Conjuntos sem declaração: MESES"):
+    with pytest.raises(
+        ValidationError, match=r"Conjuntos sem declaração: MESES \(declarados: PRODUTOS\)"
+    ):
         ModeloIR.model_validate(dados)
 
 
