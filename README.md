@@ -4,7 +4,8 @@ Plataforma multiagente *low-code* que formula, resolve e explica problemas de
 programação linear (PL) e linear inteira mista (PLIM) descritos em português,
 com os parâmetros obtidos de planilhas do próprio usuário.
 
-> **Estado:** em construção (fase F0 — fundação). Artefato do Trabalho de
+> **Estado:** em construção: agentes calibrados (F2) e interface mínima no
+> Colab (F4). Artefato do Trabalho de
 > Graduação *Plataforma multiagente low-code para formulação e resolução de
 > problemas de programação linear e linear inteira mista a partir de
 > descrições em língua portuguesa*. O roteiro
@@ -27,8 +28,20 @@ gera um dossiê com cada artefato intermediário.
 
 ## Para quem usa (Google Colab)
 
-Disponível a partir da fase F4: um notebook com botão *Open in Colab*, três
-células e uma interface gráfica.
+Abra [`notebooks/colab.ipynb`](notebooks/colab.ipynb) no Colab, crie o segredo
+`GEMINI_API_KEY` (gratuito em [aistudio.google.com](https://aistudio.google.com/apikey))
+e rode as células:
+
+```python
+%pip install -q "po-multiagente[interface] @ git+https://github.com/ThiagoBibiano/po-multiagente@develop"
+from po_multiagente import iniciar
+iniciar()
+```
+
+A interface guia em etapas: descrever o problema e enviar as planilhas,
+esclarecer os dados que a plataforma não conseguir ler e ver o resultado, com
+a explicação primeiro e a formulação, a especificação e as validações em abas.
+O botão *Carregar exemplo* traz o piloto da marcenaria.
 
 ## Para quem pesquisa
 

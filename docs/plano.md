@@ -178,7 +178,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Concluída: 36/36 válidas |
 | F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Concluída: meta atingida na conferência; prompts congelados (seção 11) |
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
-| F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Pendente |
+| F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Mínima implementada (seção 11): Gradio, notebook e aviso. Faltam Drive, retomada e o teste com o usuário |
 | F5 Conjunto-teste (paralelo desde F1) | Formato, `validar-instancia`, 24 instâncias, revisão cruzada | Não | Pendente |
 | F6 Avaliação e experimento | Critérios 1–4, McNemar, taxonomia, executor, exportação `.tex` | Sim | Pendente |
 | F7 Congelamento | v1.0 + DOI → experimento → `importa_resultados.py` → TG2 | — | Pendente |
@@ -237,4 +237,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 
    Meta atingida nas duas configurações. O Validador corrigiu v08 e v12 (valores errados sem ele) e errou na v02 (esgotou as três iterações nos sinais S1 e S2). **Prompts congelados**: os hashes estão em `tests/unit/test_prompts_congelados.py`, e mudar um prompt quebra o teste.
 3. Levar os branches empilhados (F1 → F1b → F2 → PoC) ao `develop` num único PR.
-4. F4 mínima (Gradio no Colab) e teste com o usuário.
+4. ~~F4 mínima.~~ Feita em 29/09/2026 (branch `feat/f4-interface`): `Assistente` testável sem Gradio, interface em etapas, exemplo da marcenaria e notebook `notebooks/colab.ipynb`. O exemplo, com o Gemini, chega a 4950 (55 mesas). Ficam para depois: progresso por agente ao vivo, dossiê (F3), Drive e retomada da sessão.
+5. Teste com o usuário no Colab.
+
+**Observação do teste do exemplo:** a explicação disse que a madeira foi "esgotada", mas o plano usa 275 de 300 m². O Explicador só confere números (ADR-013); afirmações qualitativas sobre folga dos recursos passam sem checagem. Candidato a sinal no Explicador, ou a relatar como limitação.
