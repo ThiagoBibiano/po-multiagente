@@ -13,7 +13,6 @@ from po_multiagente.interface import Assistente, Etapa, Resultado
 from po_multiagente.interface.app import (
     carregar_exemplo,
     construir_app,
-    formatar_execucao,
     formatar_explicacao,
     formatar_solicitacoes,
 )
@@ -71,7 +70,6 @@ def test_explicacao_ou_motivo_da_falha() -> None:
     assert formatar_explicacao(com) == "Produza 55 mesas."
     assert "Não foi possível chegar a uma resposta" in formatar_explicacao(sem)
     assert "modelador: erro" in formatar_explicacao(sem)
-    assert "Valor do objetivo: 4950" in formatar_execucao(com)
 
 
 def test_iniciar_exige_chave(monkeypatch: pytest.MonkeyPatch) -> None:

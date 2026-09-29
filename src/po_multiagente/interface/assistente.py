@@ -13,7 +13,13 @@ from pathlib import Path
 from typing import Any, Literal
 
 from po_multiagente.config import ConfiguracaoExecucao, carregar_perfil
-from po_multiagente.dominio import Solicitacao
+from po_multiagente.dominio import (
+    Especificacao,
+    ModeloIR,
+    ParecerValidador,
+    Sentido,
+    Solicitacao,
+)
 from po_multiagente.llm import LLMPort
 from po_multiagente.modelo import ErroCompilacao, compilar, para_latex
 from po_multiagente.orquestracao import Estado, Interrupcao, Sessao
@@ -56,16 +62,23 @@ class Resultado:
     valor_objetivo: float | None
     falha: str | None
     solucao: dict[str, float] = field(default_factory=dict)
-    especificacao: dict[str, Any] | None = None
-    modelo: dict[str, Any] | None = None
+    especificacao: Especificacao | None = None
+    modelo: ModeloIR | None = None
     formulacao_latex: str | None = None
-    pareceres: list[dict[str, Any]] = field(default_factory=list)
+    pareceres: tuple[ParecerValidador, ...] = ()
     chamadas_llm: int = 0
     tokens_entrada: int = 0
     tokens_saida: int = 0
     custo: float = 0.0
     moeda: str = ""
     eventos: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def sentido(self) -> Sentido | None:
+        """Maximizar ou minimizar, pelo modelo (ou pela especificação, sem modelo)."""
+        if self.modelo is not None:
+            return self.modelo.objetivo.sentido
+        return self.especificacao.sentido if self.especificacao else None
 
 
 class ErroAssistente(Exception):
@@ -235,10 +248,10 @@ def _resultado(estado: Estado, configuracao: ConfiguracaoExecucao) -> Resultado:
         valor_objetivo=resultado.valor_objetivo if resultado else None,
         falha=estado.get("falha"),
         solucao=dict(resultado.valores) if resultado else {},
-        especificacao=especificacao.model_dump(mode="json") if especificacao else None,
-        modelo=modelo.model_dump(mode="json") if modelo else None,
+        especificacao=especificacao,
+        modelo=modelo,
         formulacao_latex=formulacao,
-        pareceres=[p.model_dump(mode="json") for p in estado.get("pareceres", [])],
+        pareceres=tuple(estado.get("pareceres", [])),
         chamadas_llm=len(chamadas),
         tokens_entrada=entrada,
         tokens_saida=saida,

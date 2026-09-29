@@ -62,6 +62,14 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   ao usuário final (como funciona, dicas de descrição e planilhas), com os
   artefatos técnicos numa seção recolhida. A `Sessao` avisa cada nó que começa.
 
+- Resposta mais legível: destaque com a situação e o valor do objetivo,
+  plano recomendado em tabela (só decisões diferentes de zero), selo da
+  conferência e ZIP para baixar (solução em CSV, formulação, explicação e
+  artefatos). Nos detalhes técnicos, decisões em tabela cruzada com totais,
+  modelo com legenda e origem de cada dado, conferências como lista de
+  verificação e o entendimento do pedido em texto; o JSON bruto fica
+  recolhido.
+
 ### Corrigido
 
 - "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que
