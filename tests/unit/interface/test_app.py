@@ -1,5 +1,7 @@
 import gc
+import sys
 import tempfile
+import types
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -85,3 +87,41 @@ def test_iniciar_abre_a_interface(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gr.Blocks, "launch", lambda _self, **kwargs: chamadas.append(kwargs))
     iniciar()
     assert chamadas == [{"share": False, "show_error": True}]
+
+
+@sem_aviso_do_gradio
+def test_no_colab_a_saida_da_celula_e_para_o_usuario(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    exibicoes: list[tuple[str, int, str]] = []
+    saida = types.ModuleType("google.colab.output")
+    saida.serve_kernel_port_as_window = (  # type: ignore[attr-defined]
+        lambda porta, anchor_text: exibicoes.append(("link", porta, anchor_text))
+    )
+    saida.serve_kernel_port_as_iframe = (  # type: ignore[attr-defined]
+        lambda porta, height: exibicoes.append(("embutida", porta, height))
+    )
+    monkeypatch.setitem(sys.modules, "google.colab.output", saida)
+    monkeypatch.setenv("GEMINI_API_KEY", "chave-de-teste")
+    lancamentos: list[dict[str, Any]] = []
+
+    def lancar(app: gr.Blocks, **kwargs: Any) -> None:
+        lancamentos.append(kwargs)
+        app.server_port = 7861
+
+    monkeypatch.setattr(gr.Blocks, "launch", lancar)
+    iniciar()
+    assert lancamentos == [
+        {
+            "share": False,  # sem isto, o Gradio cria link público no Colab
+            "show_error": True,
+            "quiet": True,
+            "inline": False,
+            "prevent_thread_lock": True,
+        }
+    ]
+    assert exibicoes == [
+        ("link", 7861, "Abrir a interface em uma nova aba"),
+        ("embutida", 7861, "900"),
+    ]
+    assert "A interface está pronta logo abaixo" in capsys.readouterr().out

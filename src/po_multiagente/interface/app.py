@@ -7,6 +7,7 @@ final; os artefatos técnicos (R5) ficam numa seção recolhida. O andamento de
 cada agente aparece ao vivo.
 """
 
+import importlib
 import os
 import shutil
 import tempfile
@@ -14,6 +15,7 @@ import time
 from collections.abc import Callable, Sequence
 from importlib.resources import files
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import gradio as gr
@@ -76,6 +78,9 @@ _MOTIVOS = {
     "faltante": "não foi encontrado nas planilhas",
 }
 _LATEX: list[dict[str, str | bool]] = [{"left": "$$", "right": "$$", "display": True}]
+
+ALTURA_NO_COLAB = 900
+"""Altura, em pixels, da interface embutida no notebook (o padrão do Gradio é 500)."""
 
 Telas = tuple[Any, ...]
 Progresso = Callable[..., Any]
@@ -231,7 +236,18 @@ def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
     _ler_segredo_do_colab(perfil_modelo.variavel_chave)
     llm = AdaptadorOpenAI(perfil_modelo)
     app = construir_app(lambda: Assistente(llm, configuracao), modelo=perfil_modelo.modelo)
-    app.launch(share=compartilhar, show_error=True)
+    saida = _saida_do_colab()
+    if saida is None or compartilhar:
+        app.launch(share=compartilhar, show_error=True)
+        return
+    # No Colab, a exibição automática do Gradio traz mensagens para quem programa
+    # ("Running on https://localhost:7860/", dicas de debug e share) e 500 px de
+    # altura. Aqui o servidor sobe calado e a exibição é a do próprio Colab.
+    app.launch(share=False, show_error=True, quiet=True, inline=False, prevent_thread_lock=True)
+    porta = app.server_port
+    print("A interface está pronta logo abaixo. Para usá-la em tela cheia, abra o link.")
+    saida.serve_kernel_port_as_window(porta, anchor_text="Abrir a interface em uma nova aba")
+    saida.serve_kernel_port_as_iframe(porta, height=str(ALTURA_NO_COLAB))
 
 
 def carregar_exemplo() -> tuple[str, list[str]]:
@@ -363,6 +379,14 @@ def _exigir(assistente: Assistente | None) -> Assistente:
 
 def _caminhos(enviados: Sequence[str] | None) -> list[Path]:
     return [Path(p) for p in enviados or []]
+
+
+def _saida_do_colab() -> ModuleType | None:
+    """O módulo ``google.colab.output``, ou ``None`` fora do Colab."""
+    try:
+        return importlib.import_module("google.colab.output")
+    except ImportError:
+        return None
 
 
 def _ler_segredo_do_colab(nome: str) -> None:

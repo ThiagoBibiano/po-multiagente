@@ -70,6 +70,10 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   verificação e o entendimento do pedido em texto; o JSON bruto fica
   recolhido.
 
+- No Colab, a saída da célula fala com o usuário: uma frase, um link para
+  abrir a interface em nova aba e a interface embutida com 900 px de altura,
+  no lugar das mensagens do Gradio para desenvolvedores.
+
 ### Corrigido
 
 - "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que
