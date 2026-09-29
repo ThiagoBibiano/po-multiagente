@@ -53,6 +53,11 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   no lugar do gpt-6-luna.
 - Prompts congelados após a conferência (28/09/2026): um teste confere o
   hash de cada um.
+- Interface mínima (F4): `Assistente`, que conduz a sessão sem depender do
+  Gradio, e interface Gradio em etapas (descrever, esclarecer, conferir,
+  resultado), com o piloto da marcenaria como exemplo; `iniciar()` lê a chave
+  dos Secrets do Colab; extra `po-multiagente[interface]`; notebook
+  `notebooks/colab.ipynb`.
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.
