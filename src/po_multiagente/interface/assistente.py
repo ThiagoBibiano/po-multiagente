@@ -7,7 +7,7 @@ interrupções e visão do resultado) fica aqui, testável sem navegador.
 
 import shutil
 import tempfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -19,6 +19,17 @@ from po_multiagente.modelo import ErroCompilacao, compilar, para_latex
 from po_multiagente.orquestracao import Estado, Interrupcao, Sessao
 
 TipoEtapa = Literal["solicitacoes", "confirmacao", "resultado"]
+
+PASSOS = {
+    "interpretar": "Interpretador: lendo a descrição e as planilhas",
+    "tratar": "Recebendo os arquivos enviados",
+    "modelar": "Modelador: montando o modelo matemático",
+    "executar": "Resolvendo o modelo com o solver",
+    "validar": "Validador: conferindo o modelo e a solução",
+    "confirmar": "Preparando uma pergunta para você",
+    "explicar": "Explicador: escrevendo a resposta",
+}
+"""O que cada nó do grafo faz, em palavras do usuário, para o progresso na tela."""
 
 
 @dataclass(frozen=True)
@@ -69,6 +80,10 @@ class Assistente:
         configuracao: Configuração da execução; o padrão é o do experimento.
         pasta_trabalho: Onde guardar os arquivos enviados; o padrão é uma
             pasta temporária.
+
+    Attributes:
+        ao_avancar: Chamada com a descrição de cada passo que começa (ver
+            ``PASSOS``); a interface a troca a cada execução.
     """
 
     def __init__(
@@ -83,6 +98,7 @@ class Assistente:
         self._sessao: Sessao | None = None
         self._etapa: Etapa | None = None
         self._rodadas = 0
+        self.ao_avancar: Callable[[str], None] | None = None
 
     @property
     def etapa(self) -> Etapa | None:
@@ -98,12 +114,15 @@ class Assistente:
         if not descricao.strip():
             raise ErroAssistente("Descreva o problema antes de executar.")
         if not arquivos:
-            raise ErroAssistente("Envie ao menos um arquivo de dados (CSV ou XLSX).")
+            raise ErroAssistente(
+                "Envie ao menos uma planilha (CSV ou Excel): os números do problema vêm "
+                "das suas planilhas, e não do texto."
+            )
         pasta = self._raiz / "dados"
         shutil.rmtree(pasta, ignore_errors=True)
         _copiar(arquivos, pasta)
         self._rodadas = 0
-        self._sessao = Sessao(self._llm, self._configuracao)
+        self._sessao = Sessao(self._llm, self._configuracao, ao_iniciar_no=self._avisar)
         return self._avancar(self._sessao.iniciar(descricao.strip(), pasta))
 
     def tratar(self, respostas: Mapping[str, Path]) -> Etapa:
@@ -164,6 +183,10 @@ class Assistente:
         if self._sessao is None:
             raise ErroAssistente("A sessão ainda não começou.")
         return _resultado(self._sessao.estado, self._configuracao)
+
+    def _avisar(self, no: str) -> None:
+        if self.ao_avancar is not None:
+            self.ao_avancar(PASSOS.get(no, no))
 
     def _exigir(self, tipo: TipoEtapa) -> Sessao:
         if self._sessao is None or self._etapa is None or self._etapa.tipo != tipo:
