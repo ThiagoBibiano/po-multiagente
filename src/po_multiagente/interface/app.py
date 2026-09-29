@@ -7,16 +7,22 @@ final; os artefatos técnicos (R5) ficam numa seção recolhida. O andamento de
 cada agente aparece ao vivo.
 """
 
+import importlib
 import os
+import shutil
+import tempfile
 import time
 from collections.abc import Callable, Sequence
 from importlib.resources import files
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import gradio as gr
+from pydantic import BaseModel
 
 from po_multiagente.config import ConfiguracaoExecucao, carregar_perfil
+from po_multiagente.interface import apresentacao
 from po_multiagente.interface.assistente import Assistente, ErroAssistente, Etapa, Resultado
 from po_multiagente.llm import AdaptadorOpenAI, ErroLLM
 
@@ -72,6 +78,9 @@ _MOTIVOS = {
     "faltante": "não foi encontrado nas planilhas",
 }
 _LATEX: list[dict[str, str | bool]] = [{"left": "$$", "right": "$$", "display": True}]
+
+ALTURA_NO_COLAB = 900
+"""Altura, em pixels, da interface embutida no notebook (o padrão do Gradio é 500)."""
 
 Telas = tuple[Any, ...]
 Progresso = Callable[..., Any]
@@ -178,29 +187,37 @@ def _secao_resposta() -> list[Any]:
     """Resposta ao usuário e, recolhidos, os artefatos técnicos (R5), na ordem de ``_telas``."""
     with gr.Column(visible=False) as passo_resultado:
         gr.Markdown("## Resposta")
+        destaque = gr.Markdown()
         explicacao = gr.Markdown()
-        with gr.Accordion("Detalhes técnicos: solução, modelo e conferências", open=False):
-            with gr.Tab("Valores da solução"):
-                solucao = gr.JSON(label="Valor de cada decisão")
+        plano = gr.Markdown()
+        selo = gr.Markdown()
+        arquivo = gr.File(label="Baixar resultados (ZIP)", interactive=False)
+        with gr.Accordion("Detalhes técnicos: decisões, modelo e conferências", open=False):
+            with gr.Tab("Decisões"):
+                decisoes = gr.Markdown()
             with gr.Tab("Modelo matemático"):
-                formulacao = gr.Markdown(latex_delimiters=_LATEX)
+                modelo = gr.Markdown(latex_delimiters=_LATEX)
             with gr.Tab("Conferências"):
-                pareceres = gr.JSON(label="Pareceres do Validador")
-            with gr.Tab("Especificação"):
-                especificacao = gr.JSON(label="Quadro de especificação")
-            with gr.Tab("Modelo (JSON)"):
-                modelo_ir = gr.JSON(label="Representação intermediária")
-            with gr.Tab("Consumo"):
-                execucao = gr.Markdown()
+                conferencias = gr.Markdown()
+            with gr.Tab("Entendimento do pedido"):
+                entendimento = gr.Markdown()
+            with gr.Tab("Execução"):
+                consumo = gr.Markdown()
+                with gr.Accordion("Dados brutos (JSON)", open=False):
+                    bruto = gr.JSON(show_label=False)
     return [
         passo_resultado,
+        destaque,
         explicacao,
-        solucao,
-        formulacao,
-        especificacao,
-        modelo_ir,
-        pareceres,
-        execucao,
+        plano,
+        selo,
+        arquivo,
+        decisoes,
+        modelo,
+        conferencias,
+        entendimento,
+        consumo,
+        bruto,
     ]
 
 
@@ -219,13 +236,33 @@ def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
     _ler_segredo_do_colab(perfil_modelo.variavel_chave)
     llm = AdaptadorOpenAI(perfil_modelo)
     app = construir_app(lambda: Assistente(llm, configuracao), modelo=perfil_modelo.modelo)
-    app.launch(share=compartilhar, show_error=True)
+    saida = _saida_do_colab()
+    if saida is None or compartilhar:
+        app.launch(share=compartilhar, show_error=True)
+        return
+    # No Colab, a exibição automática do Gradio traz mensagens para quem programa
+    # ("Running on https://localhost:7860/", dicas de debug e share) e 500 px de
+    # altura. Aqui o servidor sobe calado e a exibição é a do próprio Colab.
+    app.launch(share=False, show_error=True, quiet=True, inline=False, prevent_thread_lock=True)
+    porta = app.server_port
+    print("A interface está pronta logo abaixo. Para usá-la em tela cheia, abra o link.")
+    saida.serve_kernel_port_as_window(porta, anchor_text="Abrir a interface em uma nova aba")
+    saida.serve_kernel_port_as_iframe(porta, height=str(ALTURA_NO_COLAB))
 
 
 def carregar_exemplo() -> tuple[str, list[str]]:
-    """Descrição e arquivos do piloto da marcenaria."""
+    """Descrição e arquivos do piloto da marcenaria.
+
+    Os arquivos saem como cópias numa pasta temporária: o Gradio só aceita
+    devolver arquivos da pasta de trabalho ou da temporária, e o pacote
+    instalado fica fora das duas (no Colab, em ``dist-packages``).
+    """
     descricao = (EXEMPLO / "descricao.md").read_text(encoding="utf-8")
-    return descricao, [str(p) for p in sorted((EXEMPLO / "dados").iterdir())]
+    pasta = Path(tempfile.mkdtemp(prefix="po-exemplo-"))
+    copias = []
+    for arquivo in sorted((EXEMPLO / "dados").iterdir()):
+        copias.append(str(shutil.copy(arquivo, pasta / arquivo.name)))
+    return descricao, copias
 
 
 def formatar_solicitacoes(etapa: Etapa) -> str:
@@ -257,19 +294,6 @@ def formatar_explicacao(resultado: Resultado) -> str:
     )
 
 
-def formatar_execucao(resultado: Resultado) -> str:
-    """Status, valor e consumo da execução."""
-    valor = "—" if resultado.valor_objetivo is None else f"{resultado.valor_objetivo:g}"
-    return (
-        f"- Status do solver: {resultado.status or 'sem resultado'}\n"
-        f"- Valor do objetivo: {valor}\n"
-        f"- Iterações do Validador: {len(resultado.pareceres)}\n"
-        f"- Chamadas ao modelo: {resultado.chamadas_llm} "
-        f"({resultado.tokens_entrada} tokens de entrada, {resultado.tokens_saida} de saída)\n"
-        f"- Custo estimado: {resultado.moeda} {resultado.custo:.4f}"
-    )
-
-
 def formatar_andamento(etapa: Etapa, segundos: float) -> str:
     """Linha de estado depois de cada execução."""
     tempo = f"{segundos:.0f} s"
@@ -296,7 +320,6 @@ def _telas(assistente: Assistente, etapa: Etapa, segundos: float = 0.0) -> Telas
     em_tratamento = etapa.tipo == "solicitacoes"
     em_confirmacao = etapa.tipo == "confirmacao"
     no_fim = etapa.tipo == "resultado"
-    resultado = assistente.resultado() if no_fim else None
     return (
         assistente,
         formatar_andamento(etapa, segundos),
@@ -305,14 +328,39 @@ def _telas(assistente: Assistente, etapa: Etapa, segundos: float = 0.0) -> Telas
         gr.update(visible=em_confirmacao),
         "\n\n".join(etapa.perguntas),
         gr.update(visible=no_fim),
-        formatar_explicacao(resultado) if resultado else "",
-        resultado.solucao if resultado else None,
-        f"$$\n{resultado.formulacao_latex}\n$$" if resultado and resultado.formulacao_latex else "",
-        resultado.especificacao if resultado else None,
-        resultado.modelo if resultado else None,
-        resultado.pareceres if resultado else None,
-        formatar_execucao(resultado) if resultado else "",
+        *(_resposta(assistente.resultado(), segundos) if no_fim else _SEM_RESPOSTA),
     )
+
+
+_SEM_RESPOSTA: Telas = ("", "", "", "", None, "", "", "", "", "", None)
+
+
+def _resposta(resultado: Resultado, segundos: float) -> Telas:
+    """Conteúdo da seção de resposta, na ordem de ``_secao_resposta`` (sem a coluna)."""
+    bruto = {
+        "solucao": resultado.solucao,
+        "especificacao": _json(resultado.especificacao),
+        "modelo": _json(resultado.modelo),
+        "conferencias": [p.model_dump(mode="json") for p in resultado.pareceres],
+    }
+    pasta = Path(tempfile.mkdtemp(prefix="po-resultado-"))
+    return (
+        apresentacao.destaque(resultado),
+        formatar_explicacao(resultado),
+        apresentacao.plano_recomendado(resultado),
+        apresentacao.selo_conferencia(resultado),
+        str(apresentacao.empacotar(resultado, pasta)),
+        apresentacao.decisoes(resultado),
+        apresentacao.modelo_legivel(resultado),
+        apresentacao.conferencias(resultado.pareceres),
+        apresentacao.entendimento(resultado.especificacao),
+        apresentacao.consumo(resultado, segundos),
+        bruto,
+    )
+
+
+def _json(objeto: BaseModel | None) -> dict[str, Any] | None:
+    return objeto.model_dump(mode="json") if objeto is not None else None
 
 
 def _proteger(passo: Callable[[], Etapa]) -> Etapa:
@@ -331,6 +379,14 @@ def _exigir(assistente: Assistente | None) -> Assistente:
 
 def _caminhos(enviados: Sequence[str] | None) -> list[Path]:
     return [Path(p) for p in enviados or []]
+
+
+def _saida_do_colab() -> ModuleType | None:
+    """O módulo ``google.colab.output``, ou ``None`` fora do Colab."""
+    try:
+        return importlib.import_module("google.colab.output")
+    except ImportError:
+        return None
 
 
 def _ler_segredo_do_colab(nome: str) -> None:
