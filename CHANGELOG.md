@@ -61,6 +61,12 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Interface: andamento de cada agente ao vivo e tempo total; textos voltados
   ao usuário final (como funciona, dicas de descrição e planilhas), com os
   artefatos técnicos numa seção recolhida. A `Sessao` avisa cada nó que começa.
+
+### Corrigido
+
+- "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que
+  ficam dentro do pacote instalado (`dist-packages`); agora saem como cópias
+  numa pasta temporária.
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.

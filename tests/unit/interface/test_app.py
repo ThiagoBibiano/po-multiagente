@@ -1,4 +1,5 @@
 import gc
+import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,10 @@ def test_exemplo_da_marcenaria() -> None:
     assert "mesas e cadeiras" in descricao
     assert [Path(a).name for a in arquivos] == ["produtos.csv", "recursos.csv"]
     assert all(Path(a).is_file() for a in arquivos)
+    # O Gradio recusa devolver arquivos fora da pasta de trabalho e da temporária,
+    # e o pacote instalado fica fora das duas (no Colab, em dist-packages).
+    temporaria = Path(tempfile.gettempdir()).resolve()
+    assert all(temporaria in Path(a).resolve().parents for a in arquivos)
 
 
 def test_solicitacoes_numeradas_e_so_sobre_dados() -> None:

@@ -8,6 +8,8 @@ cada agente aparece ao vivo.
 """
 
 import os
+import shutil
+import tempfile
 import time
 from collections.abc import Callable, Sequence
 from importlib.resources import files
@@ -223,9 +225,18 @@ def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
 
 
 def carregar_exemplo() -> tuple[str, list[str]]:
-    """Descrição e arquivos do piloto da marcenaria."""
+    """Descrição e arquivos do piloto da marcenaria.
+
+    Os arquivos saem como cópias numa pasta temporária: o Gradio só aceita
+    devolver arquivos da pasta de trabalho ou da temporária, e o pacote
+    instalado fica fora das duas (no Colab, em ``dist-packages``).
+    """
     descricao = (EXEMPLO / "descricao.md").read_text(encoding="utf-8")
-    return descricao, [str(p) for p in sorted((EXEMPLO / "dados").iterdir())]
+    pasta = Path(tempfile.mkdtemp(prefix="po-exemplo-"))
+    copias = []
+    for arquivo in sorted((EXEMPLO / "dados").iterdir()):
+        copias.append(str(shutil.copy(arquivo, pasta / arquivo.name)))
+    return descricao, copias
 
 
 def formatar_solicitacoes(etapa: Etapa) -> str:
