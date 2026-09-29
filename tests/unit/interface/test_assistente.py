@@ -6,6 +6,7 @@ import pytest
 from po_multiagente.avaliacao.instancia import carregar_instancia
 from po_multiagente.experimento.roteiro import roteiro_do_gabarito
 from po_multiagente.interface import Assistente, ErroAssistente
+from po_multiagente.interface.assistente import PASSOS
 from po_multiagente.llm import LLMRoteirizado
 from tests.instancias import DESCRICAO, MODELO, QUADRO, VALOR, criar_instancia
 
@@ -35,6 +36,24 @@ def test_fluxo_direto_chega_ao_resultado(tmp_path: Path) -> None:
     assert resultado.especificacao is not None
     assert resultado.chamadas_llm == 3
     assert (tmp_path / "trabalho" / "dados" / "produtos.csv").exists()
+
+
+def test_avisa_cada_passo_em_palavras_do_usuario(tmp_path: Path) -> None:
+    pasta = criar_instancia(tmp_path / "inst")
+    llm = LLMRoteirizado(
+        {"interpretador": [QUADRO], "modelador": [MODELO], "explicador": [{"texto": "{{OBJ}}."}]}
+    )
+    assistente = Assistente(llm, pasta_trabalho=tmp_path / "trabalho")
+    passos: list[str] = []
+    assistente.ao_avancar = passos.append
+    assistente.comecar(DESCRICAO, dados(pasta))
+    assert passos == [
+        PASSOS["interpretar"],
+        PASSOS["modelar"],
+        PASSOS["executar"],
+        PASSOS["validar"],
+        PASSOS["explicar"],
+    ]
 
 
 def test_solicitacao_respondida_com_arquivo_tratado(tmp_path: Path) -> None:
@@ -76,7 +95,7 @@ def test_erros_de_uso(tmp_path: Path) -> None:
         assistente.confirmar(aceita=True)
     with pytest.raises(ErroAssistente, match="Descreva"):
         assistente.comecar("  ", dados(pasta))
-    with pytest.raises(ErroAssistente, match="arquivo"):
+    with pytest.raises(ErroAssistente, match="planilha"):
         assistente.comecar(DESCRICAO, [])
     assistente.comecar(DESCRICAO, dados(pasta))
     tratado = pasta / "dados_tratados" / "capacidade.csv"

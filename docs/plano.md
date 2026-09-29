@@ -238,6 +238,6 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
    Meta atingida nas duas configurações. O Validador corrigiu v08 e v12 (valores errados sem ele) e errou na v02 (esgotou as três iterações nos sinais S1 e S2). **Prompts congelados**: os hashes estão em `tests/unit/test_prompts_congelados.py`, e mudar um prompt quebra o teste.
 3. Levar os branches empilhados (F1 → F1b → F2 → PoC) ao `develop` num único PR.
 4. ~~F4 mínima.~~ Feita em 29/09/2026 (branch `feat/f4-interface`): `Assistente` testável sem Gradio, interface em etapas, exemplo da marcenaria e notebook `notebooks/colab.ipynb`. O exemplo, com o Gemini, chega a 4950 (55 mesas). Ficam para depois: progresso por agente ao vivo, dossiê (F3), Drive e retomada da sessão.
-5. Teste com o usuário no Colab.
+5. Teste com o usuário no Colab. Primeiras observações do autor (29/09/2026): não havia sinal de execução depois do clique, e o texto não era voltado ao usuário final. Corrigido: andamento por agente ao vivo, textos novos e detalhes técnicos recolhidos. **Em aberto:** usar só com a descrição, sem planilha. Hoje não funciona (o Interpretador não acha origem para os parâmetros), e é coerente com o desenho: os números vêm das planilhas, nunca do modelo de linguagem.
 
 **Observação do teste do exemplo:** a explicação disse que a madeira foi "esgotada", mas o plano usa 275 de 300 m². O Explicador só confere números (ADR-013); afirmações qualitativas sobre folga dos recursos passam sem checagem. Candidato a sinal no Explicador, ou a relatar como limitação.

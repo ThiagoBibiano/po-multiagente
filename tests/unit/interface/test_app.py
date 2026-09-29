@@ -53,7 +53,8 @@ def test_solicitacoes_numeradas_e_so_sobre_dados() -> None:
         forma_esperada="Horas do mês",
     )
     texto = formatar_solicitacoes(Etapa("solicitacoes", solicitacoes=(solicitacao,)))
-    assert "1. `horas.csv`, coluna `Horas`: o dado está em outra granularidade." in texto
+    assert "1. Planilha `horas.csv`, coluna `Horas`: o dado está em outro período" in texto
+    assert "Como deve ficar: Horas do mês" in texto
     assert "mesma ordem" in texto
 
 
@@ -63,7 +64,7 @@ def test_explicacao_ou_motivo_da_falha() -> None:
     )
     sem = Resultado(explicacao=None, status=None, valor_objetivo=None, falha="modelador: erro")
     assert formatar_explicacao(com) == "Produza 55 mesas."
-    assert "sem solução" in formatar_explicacao(sem)
+    assert "Não foi possível chegar a uma resposta" in formatar_explicacao(sem)
     assert "modelador: erro" in formatar_explicacao(sem)
     assert "Valor do objetivo: 4950" in formatar_execucao(com)
 

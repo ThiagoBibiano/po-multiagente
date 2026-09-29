@@ -58,6 +58,9 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   resultado), com o piloto da marcenaria como exemplo; `iniciar()` lê a chave
   dos Secrets do Colab; extra `po-multiagente[interface]`; notebook
   `notebooks/colab.ipynb`.
+- Interface: andamento de cada agente ao vivo e tempo total; textos voltados
+  ao usuário final (como funciona, dicas de descrição e planilhas), com os
+  artefatos técnicos numa seção recolhida. A `Sessao` avisa cada nó que começa.
 - Erro de referência não declarada lista também as declaradas (por exemplo,
   `Conjuntos sem declaração: produto (declarados: PRODUTOS)`), para que a
   nova tentativa do agente saiba com o que substituí-la.
