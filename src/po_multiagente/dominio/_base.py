@@ -65,8 +65,12 @@ def exigir_declarados(usados: Iterable[str], declarados: Iterable[str], contexto
         contexto: Descrição usada na mensagem de erro.
 
     Raises:
-        ValueError: Se houver referência não declarada; a mensagem lista todas.
+        ValueError: Se houver referência não declarada. A mensagem lista as
+            faltantes e as declaradas, para que o modelo de linguagem saiba
+            com o que substituí-las.
     """
-    faltantes = sorted(set(usados) - set(declarados))
+    validos = sorted(set(declarados))
+    faltantes = sorted(set(usados) - set(validos))
     if faltantes:
-        raise ValueError(f"{contexto} sem declaração: {', '.join(faltantes)}")
+        opcoes = f"declarados: {', '.join(validos)}" if validos else "nenhum declarado"
+        raise ValueError(f"{contexto} sem declaração: {', '.join(faltantes)} ({opcoes})")

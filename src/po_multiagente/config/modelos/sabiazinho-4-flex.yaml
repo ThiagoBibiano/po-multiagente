@@ -1,0 +1,26 @@
+# O sabiazinho-4 no nível flex da Maritaca: metade do preço, sujeito a
+# disponibilidade de capacidade (docs.maritaca.ai/pt/precos, 27/09/2026). Não
+# se soma ao desconto noturno.
+#
+# A flex só é atendida pela API de Chat Completions: a de Respostas ignora
+# service_tier (conferido na API em 27/09/2026). Cada chamada registra o nível
+# que a Maritaca informa ter aplicado, pois a API aceita qualquer valor.
+id: sabiazinho-4-flex
+provedor: maritaca
+api: chat
+modelo: sabiazinho-4
+url_base: https://chat.maritaca.ai/api
+variavel_chave: MARITACA_API_KEY
+nivel_servico: flex
+esforco_raciocinio: null
+temperatura: 0.0
+max_saida_tokens: 16000
+saida_estruturada_estrita: true
+aceita_seed: false
+moeda: BRL
+# Preço de entrada em cache na flex não documentado; fica igual ao da entrada
+# (teto). Nenhuma execução até aqui teve tokens em cache.
+precos_por_milhao:
+  entrada: 0.50
+  entrada_em_cache: 0.50
+  saida: 2.00

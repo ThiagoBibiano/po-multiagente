@@ -21,7 +21,16 @@ classifiers = [
 ]
 # Dependências entram na fase que as usa (docs/plano.md, seção 9): o pacote
 # só declara o que importa de fato.
-dependencies = ["pydantic>=2.7,<3"]
+dependencies = [
+    "langgraph>=1.2,<2",
+    "lark>=1.2,<2",
+    "openai>=3.19,<4",
+    "openpyxl>=3.1,<4",
+    # <4: o PuLP 4 remove o CBC 2.10.3 embutido, versão fixada no TG (ADR-006).
+    "pulp>=3.3,<4",
+    "pydantic>=2.7,<3",
+    "pyyaml>=6,<7",
+]
 
 [project.urls]
 Repository = "https://github.com/ThiagoBibiano/po-multiagente"
@@ -30,8 +39,19 @@ Changelog = "https://github.com/ThiagoBibiano/po-multiagente/blob/main/CHANGELOG
 [project.scripts]
 po-multiagente = "po_multiagente.cli:main"
 
+# Adaptadores de solver (ADR-006): um solver novo é um arquivo de adaptador e
+# uma linha aqui.
+[project.entry-points."po_multiagente.solvers"]
+pulp = "po_multiagente.solver.adaptador_pulp:BackendPulp"
+
+[project.optional-dependencies]
+interface = [
+    "gradio>=6.28,<7",
+]
+
 [dependency-groups]
 dev = [
+    "gradio>=6.28,<7",
     "hypothesis>=6.100",
     "import-linter>=2.1",
     "mypy>=1.11",
@@ -39,6 +59,8 @@ dev = [
     "pytest>=8.2",
     "pytest-cov>=5.0",
     "ruff>=0.6",
+    "types-openpyxl>=3.1",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 docs = ["mkdocs-material>=9.5"]
 
@@ -77,7 +99,15 @@ select = [
 ignore = [
     # Texto em português usa travessões, "×" e aspas tipográficas de propósito.
     "RUF001", "RUF002", "RUF003",
+    # Exceções em português levam o prefixo "Erro" (ADR-005), e não o sufixo "Error".
+    "N818",
+    # Estilo Google: os argumentos do construtor ficam na docstring da classe.
+    "D107",
 ]
+
+[tool.ruff.lint.pylint]
+# Despacho por `match` sobre os nós da árvore sintática: um return por variante.
+max-returns = 8
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -86,7 +116,7 @@ convention = "google"
 ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D", "ANN", "PLR2004"]
+"tests/**" = ["D", "ANN", "PLR2004", "PLR0913"]
 
 # --------------------------------------------------------------------------
 # Mypy
@@ -98,6 +128,11 @@ warn_unreachable = true
 plugins = ["pydantic.mypy"]
 mypy_path = "src"
 files = ["src", "tests"]
+
+# O PuLP não publica anotações de tipo; só o adaptador o importa.
+[[tool.mypy.overrides]]
+module = ["pulp", "pulp.*"]
+ignore_missing_imports = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
@@ -134,7 +169,8 @@ name = "Camadas: cada camada só importa as de baixo"
 type = "layers"
 containers = ["po_multiagente"]
 layers = [
-    "interface | cli | experimento",
+    "cli",
+    "interface | experimento",
     "orquestracao | avaliacao",
     "agentes",
     "validacao | rastreabilidade",

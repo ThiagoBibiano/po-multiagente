@@ -14,7 +14,8 @@ Camadas verificadas pelo **import-linter** (`pyproject.toml`), de cima para
 baixo:
 
 ```
-interface | cli | experimento
+cli
+interface | experimento
 orquestracao | avaliacao
 agentes
 validacao | rastreabilidade
@@ -32,3 +33,9 @@ Contratos adicionais: nenhum módulo do caminho de execução importa
 
 - Um import que viole as camadas quebra o pre-commit e o CI.
 - Mudar um contrato exige atualizar este ADR no mesmo PR.
+
+## Revisão (26/09/2026)
+
+A CLI subiu para uma camada própria, acima de `interface` e `experimento`: ela
+é o ponto de entrada que despacha para as duas (o comando `calibrar` chama o
+experimento). As demais regras não mudaram.
