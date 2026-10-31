@@ -247,6 +247,19 @@ def test_s5_rejeita_variavel_fora_do_dominio() -> None:
     assert verificacao.elementos == ("n",)
 
 
+def test_s5_tolera_arredondamento_em_razao_com_lado_direito_zero() -> None:
+    # c <= 0,5 n compila como c - 0,5 n <= 0: a folga acompanha os termos, e não o zero.
+    m = neutro(
+        Sentido.MAXIMIZAR,
+        {"c": 1.0},
+        [var("c"), var("n")],
+        [res("razao", {"c": 1.0, "n": -0.5}, LE, 0.0), res("teto", {"n": 1.0}, LE, 1000.0)],
+    )
+    assert sinal_s5_limites(m, resultado(StatusSolucao.OTIMO, 500.0, c=500.0001, n=1000.0)).aprovada
+    verificacao = sinal_s5_limites(m, resultado(StatusSolucao.OTIMO, 501.0, c=501.0, n=1000.0))
+    assert verificacao.elementos == ("razao",)
+
+
 def test_s5_pergunta_ao_usuario_quando_custo_minimo_ignora_as_restricoes() -> None:
     # Falta a restrição de demanda: o custo mínimo é zero, sem produzir nada.
     m = neutro(

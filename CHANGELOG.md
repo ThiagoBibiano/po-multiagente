@@ -117,7 +117,9 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   de arquivo passa pelo proxy do Colab). Agora cada tabela aparece também como
   texto para copiar, e os arquivos oferecidos (tabelas e ZIP do resultado)
   ganham uma cópia em `/content/po-multiagente/`, visível no painel de arquivos.
-
+- S5: a folga de cada restrição acompanha o maior termo, e não só o lado
+  direito. Numa razão compilada como `C - k*N <= 0`, o erro de arredondamento
+  do solver (da ordem de 1e-5) reprovava um modelo correto.
 - "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que
   ficam dentro do pacote instalado (`dist-packages`); agora saem como cópias
   numa pasta temporária.
