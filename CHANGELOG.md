@@ -76,6 +76,17 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   `google.colab.kernel.proxyPort`, sem a função `serve_kernel_port_as_window`,
   que o Colab avisa estar em descontinuação.
 
+- Avaliação (F6): critério 1 por componente (`avaliacao.formulacao`), que
+  compara os modelos instanciados, identifica as variáveis pelos membros e
+  não pelos nomes, normaliza as restrições e aceita equivalências conferidas
+  pelo solver; maioria entre repetições, McNemar exato, recortes por faixa,
+  origem, família e classe, critério 4, categoria sugerida das falhas e
+  tabelas `.tex` (`avaliacao.resultados`).
+- CLI: `experimento` (todas as instâncias, duas configurações, três
+  repetições) e `avaliar` (reavalia uma pasta de execuções). O executor
+  retoma um lote interrompido a partir das execuções já gravadas.
+- `Medida` registra faixa, origem e o critério 1.
+
 ### Corrigido
 
 - "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que

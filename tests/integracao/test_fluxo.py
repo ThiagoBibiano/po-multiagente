@@ -34,6 +34,8 @@ def test_fluxo_com_solicitacao_de_tratamento(
     instancia = carregar_instancia(criar_instancia(tmp_path / "inst", semanal=True))
     medida, estado = executar_instancia(instancia, configuracao, roteiro_do_gabarito(instancia))
     assert medida.correta
+    assert medida.formulacao_correta
+    assert medida.formulacao["restricoes"] == [1.0, 1.0]
     assert medida.valor_obtido == pytest.approx(VALOR)
     assert medida.solicitacoes_emitidas == 1
     assert medida.solicitacoes_nao_atendidas == 0
@@ -137,3 +139,22 @@ def test_cli_calibrar(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Non
     )  # fmt: skip
     assert codigo == 0
     assert "| sem_validador | ajuste | 1 |" in capsys.readouterr().out
+
+
+def test_experimento_retoma_o_lote_e_avalia(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    conjunto = tmp_path / "conjunto"
+    criar_instancia(conjunto / "a")
+    saida = tmp_path / "saida"
+    argumentos = ["experimento", str(conjunto), "--modo", "roteiro", "--saida", str(saida)]
+    assert main(argumentos) == 0
+    assert len(list((saida / "execucoes").glob("*.json"))) == 6  # 2 configurações x 3
+    (saida / "execucoes" / "a__sem__r3.json").unlink()
+    capsys.readouterr()
+    assert main(argumentos) == 0
+    saida_cli = capsys.readouterr().out
+    assert saida_cli.count("(gravada)") == 5
+    assert "| 1. Formulação correta | 1/1 (100%) | 1/1 (100%) |" in saida_cli
+    assert (saida / "tabelas" / "criterios.tex").exists()
+    assert "retomadas" in json.loads((saida / "manifesto.json").read_text())

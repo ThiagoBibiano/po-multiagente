@@ -7,7 +7,9 @@ respondedor simulado e mede, sem juízo do modelo de linguagem:
   esperado, sem falha de agente;
 - critério 3 (solução correta): status esperado e, com solução, valor
   objetivo dentro de 1% da referência;
-- associação parâmetro → coluna (parte do critério 1);
+- critério 1 (formulação correta): o modelo produzido, instanciado com os
+  dados, coincide com a referência componente a componente
+  (``avaliacao.formulacao``), e a associação parâmetro → coluna;
 - iterações e sinais do Validador, tentativas de formato, solicitações, tokens
   e custo.
 """
@@ -25,7 +27,12 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from po_multiagente.avaliacao.associacao import acuracia_associacao
-from po_multiagente.avaliacao.instancia import EPSILON, Instancia, carregar_instancia
+from po_multiagente.avaliacao.instancia import (
+    EPSILON,
+    Instancia,
+    avaliar_formulacao,
+    carregar_instancia,
+)
 from po_multiagente.config import ConfiguracaoExecucao, carregar_perfil
 from po_multiagente.dominio import StatusSolucao
 from po_multiagente.experimento.respondedor import RespondedorSimulado
@@ -70,6 +77,11 @@ class Medida:
     moeda: str
     duracao_s: float
     eventos: list[dict[str, Any]] = field(default_factory=list)
+    faixa: str | None = None
+    origem: str | None = None
+    formulacao_correta: bool = False
+    formulacao: dict[str, list[float]] = field(default_factory=dict)
+    divergencias_formulacao: tuple[str, ...] = ()
 
 
 def pastas_da_particao(conjunto: Path, particao: str, ids: Sequence[str] = ()) -> list[Path]:
@@ -161,6 +173,12 @@ def medir(
     associacao = (
         acuracia_associacao(especificacao, instancia.especificacao) if especificacao else None
     )
+    modelo = estado.get("modelo")
+    formulacao = (
+        avaliar_formulacao(instancia, modelo, especificacao)
+        if modelo is not None and especificacao is not None
+        else None
+    )
     pareceres = estado.get("pareceres", [])
     sinais = sorted({v.sinal.value for p in pareceres for v in p.verificacoes if not v.aprovada})
     chamadas = estado.get("chamadas", [])
@@ -197,6 +215,15 @@ def medir(
         moeda=perfil.moeda,
         duracao_s=duracao,
         eventos=list(estado.get("eventos", [])),
+        faixa=instancia.meta.get("faixa"),
+        origem=instancia.meta.get("origem"),
+        formulacao_correta=formulacao is not None and formulacao.correta,
+        formulacao=(
+            {k: [c.precisao, c.revocacao] for k, c in formulacao.componentes.items()}
+            if formulacao
+            else {}
+        ),
+        divergencias_formulacao=formulacao.divergencias if formulacao else (),
     )
 
 
@@ -210,7 +237,10 @@ def calibrar(
     """Executa as instâncias em cada configuração e grava os relatórios.
 
     As configurações são intercaladas por instância (Passo 7): para cada
-    instância e repetição, roda-se cada configuração em sequência.
+    instância e repetição, roda-se cada configuração em sequência. As
+    execuções já gravadas em ``saida`` são lidas, e não repetidas: um lote
+    interrompido (limite diário do nível gratuito, queda do Colab) continua de
+    onde parou quando chamado de novo com a mesma pasta.
     """
     saida.mkdir(parents=True, exist_ok=True)
     _gravar_manifesto(saida, modo, configuracoes)
@@ -220,12 +250,17 @@ def calibrar(
         for repeticao in range(1, repeticoes + 1):
             for configuracao in configuracoes:
                 rotulo = f"{pasta.name}__{'com' if configuracao.validador else 'sem'}__r{repeticao}"
+                caminho = saida / "execucoes" / f"{rotulo}.json"
+                if caminho.exists():
+                    medidas.append(ler_medida(caminho))
+                    print(_linha(medidas[-1]) + " (gravada)", flush=True)
+                    continue
                 llm = criar_llm(
                     modo, configuracao, saida / "cassetes" / f"{rotulo}.jsonl", instancia
                 )
                 medida, estado = executar_instancia(instancia, configuracao, llm, repeticao)
                 medidas.append(medida)
-                _gravar_execucao(saida / "execucoes" / f"{rotulo}.json", medida, estado)
+                _gravar_execucao(caminho, medida, estado)
                 print(_linha(medida), flush=True)
     (saida / "resumo.md").write_text(resumo(medidas), encoding="utf-8")
     with (saida / "medidas.jsonl").open("w", encoding="utf-8") as arquivo:
@@ -234,6 +269,14 @@ def calibrar(
                 json.dumps({**asdict(medida), "eventos": None}, ensure_ascii=False) + "\n"
             )
     return medidas
+
+
+def ler_medida(caminho: Path) -> Medida:
+    """Medida gravada por ``calibrar`` num arquivo de execução."""
+    dados = json.loads(caminho.read_text(encoding="utf-8"))["medida"]
+    for chave in ("sinais_acionados", "tentativas_formato", "divergencias_formulacao"):
+        dados[chave] = tuple(dados.get(chave) or ())
+    return Medida(**dados)
 
 
 def resumo(medidas: Sequence[Medida]) -> str:
@@ -273,8 +316,9 @@ def _pct(parte: int, total: int) -> str:
 
 def _linha(medida: Medida) -> str:
     marca = "OK " if medida.correta else ("E2E" if medida.ponta_a_ponta else "---")
+    formulacao = "F" if medida.formulacao_correta else "-"
     return (
-        f"{marca} {medida.instancia:48s} {medida.configuracao:14s} {medida.status:14s} "
+        f"{marca}{formulacao} {medida.instancia:48s} {medida.configuracao:14s} {medida.status:14s} "
         f"obtido={medida.valor_obtido} esperado={medida.valor_esperado} "
         f"it={medida.iteracoes_validador} {medida.moeda} {medida.custo:.4f}"
     )
@@ -283,6 +327,12 @@ def _linha(medida: Medida) -> str:
 def _gravar_manifesto(
     saida: Path, modo: str, configuracoes: Sequence[ConfiguracaoExecucao]
 ) -> None:
+    caminho = saida / "manifesto.json"
+    if caminho.exists():
+        anterior = json.loads(caminho.read_text(encoding="utf-8"))
+        anterior.setdefault("retomadas", []).append(datetime.now(UTC).isoformat())
+        caminho.write_text(json.dumps(anterior, ensure_ascii=False, indent=2), encoding="utf-8")
+        return
     manifesto = {
         "inicio": datetime.now(UTC).isoformat(),
         "modo_llm": modo,

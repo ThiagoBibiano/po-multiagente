@@ -180,7 +180,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
 | F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Mínima implementada (seção 11): Gradio, notebook e aviso. Faltam Drive, retomada e o teste com o usuário |
 | F5 Conjunto-teste (paralelo desde F1) | Formato, `validar-instancia`, 24 instâncias, revisão cruzada | Não | Pendente |
-| F6 Avaliação e experimento | Critérios 1–4, McNemar, taxonomia, executor, exportação `.tex` | Sim | Pendente |
+| F6 Avaliação e experimento | Critérios 1–4, McNemar, taxonomia, executor, exportação `.tex` | Sim | Pronta (31/10/2026), sem a rodada |
 | F7 Congelamento | v1.0 + DOI → experimento → `importa_resultados.py` → TG2 | — | Pendente |
 
 **Meta de versão efetiva (aprovada em 26/09/2026):** na partição de conferência, ≥ 80% de ponta a ponta (critério 2) e ≥ 70% de solução correta (critério 3).
@@ -241,3 +241,17 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 5. Teste com o usuário no Colab. Primeiras observações do autor (29/09/2026): não havia sinal de execução depois do clique, e o texto não era voltado ao usuário final. Corrigido: andamento por agente ao vivo, textos novos e detalhes técnicos recolhidos. **Em aberto:** usar só com a descrição, sem planilha. Hoje não funciona (o Interpretador não acha origem para os parâmetros), e é coerente com o desenho: os números vêm das planilhas, nunca do modelo de linguagem.
 
 **Observação do teste do exemplo:** a explicação disse que a madeira foi "esgotada", mas o plano usa 275 de 300 m². O Explicador só confere números (ADR-013); afirmações qualitativas sobre folga dos recursos passam sem checagem. Candidato a sinal no Explicador, ou a relatar como limitação.
+
+## 12. Estado em 31/10/2026
+
+**Conjunto-teste:** as 24 instâncias foram construídas, e as 24 passam em `validar-instancia` (repositório privado, branch `feat/conjunto-teste`). A faixa base/ampliada foi fixada antes da construção. Uma instância expôs um defeito na folga do S5, corrigido no branch `fix/s5-folga-termos`.
+
+**F6, avaliação (branch `feat/f6-avaliacao`):**
+
+- Critério 1 (`avaliacao.formulacao`): os dois modelos são comparados já instanciados, e a variável é identificada pelos membros que a indexam. As famílias são associadas pela maior sobreposição de membros, com qualquer ordem de índices. As restrições são normalizadas (sentido, lado, escala; uma restrição de uma só variável vira limite). Uma linha sem par conta como certa quando o outro modelo a implica, o que o solver confere maximizando o lado esquerdo. Um modelo inviável não implica nada.
+- Conferido nas 48 execuções gravadas da partição de ajuste, com o Gemini. O critério 1 dá 20/24 nas duas configurações, contra 22/24 do critério 3. As divergências são reais: a09 usa quantidades onde a referência usa frações, a05 acrescenta um índice de semana e a v04 omite a variável de uso da soja.
+- `avaliacao.resultados`: maioria entre repetições, McNemar exato por critério, recortes por faixa, origem, família e classe, critério 4, categoria sugerida da falha (a conferir à mão) e tabelas `.tex`.
+- CLI: `po-multiagente experimento <conjunto>` (duas configurações, três repetições; retoma o lote se a pasta já tiver execuções) e `po-multiagente avaliar <saída> <conjunto>`.
+- Com o roteiro do gabarito, as 36 instâncias de calibração dão 100% nos três critérios.
+
+**Falta para congelar a v1.0:** o dossiê (F3) e a revisão cruzada do conjunto-teste.
