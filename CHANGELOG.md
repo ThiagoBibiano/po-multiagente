@@ -86,6 +86,12 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   repetições) e `avaliar` (reavalia uma pasta de execuções). O executor
   retoma um lote interrompido a partir das execuções já gravadas.
 - `Medida` registra faixa, origem e o critério 1.
+- Dossiê de cada execução (F3, `rastreabilidade`): pedido, quadro, modelo
+  em JSON e LaTeX, solução e log do solver, validações, explicação com a
+  procedência dos números, chamadas ao modelo de linguagem, configuração,
+  versões e hash de cada planilha no início e no fim. Sai como ZIP com
+  `index.html`, no download da interface e em `dossies/` de cada lote do
+  experimento.
 
 ### Corrigido
 

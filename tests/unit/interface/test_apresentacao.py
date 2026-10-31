@@ -61,6 +61,7 @@ def test_pacote_para_baixar(resultado: Resultado, tmp_path: Path) -> None:
         nomes = set(zip_.namelist())
         assert {"solucao.csv", "explicacao.md", "formulacao.tex", "modelo.json"} <= nomes
         assert zip_.read("solucao.csv").decode().startswith("variavel;indices;valor")
+        assert {"dossie/index.html", "dossie/chamadas.jsonl", "dossie/manifesto.json"} <= nomes
 
 
 def transporte(tipo: str = "continua") -> ModeloIR:

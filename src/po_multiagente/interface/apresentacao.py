@@ -25,6 +25,7 @@ from po_multiagente.dominio import (
     Variavel,
 )
 from po_multiagente.interface.assistente import Resultado
+from po_multiagente.rastreabilidade import arquivos_do_dossie
 
 MAX_LINHAS = 60
 """Linhas de uma tabela antes de cortar (o arquivo para baixar tem todas)."""
@@ -273,7 +274,11 @@ def consumo(resultado: Resultado, segundos: float | None = None) -> str:
 
 
 def empacotar(resultado: Resultado, destino: Path) -> Path:
-    """Arquivo ZIP com a solução, a formulação e os artefatos de cada agente.
+    """Arquivo ZIP com a solução, a formulação, os artefatos de cada agente e o dossiê.
+
+    O dossiê (``dossie/index.html`` e um arquivo por artefato) traz também as
+    chamadas ao modelo de linguagem, a configuração, as versões e o hash das
+    planilhas no início e no fim (R5).
 
     Returns:
         Caminho do ZIP criado em ``destino``.
@@ -295,6 +300,9 @@ def empacotar(resultado: Resultado, destino: Path) -> Path:
                 zip_.writestr(nome, objeto.model_dump_json(indent=2))
         pareceres = [p.model_dump(mode="json") for p in resultado.pareceres]
         zip_.writestr("conferencias.json", json.dumps(pareceres, ensure_ascii=False, indent=2))
+        if resultado.dossie is not None:
+            for nome, conteudo in arquivos_do_dossie(resultado.dossie).items():
+                zip_.writestr(f"dossie/{nome}", conteudo)
     return caminho
 
 

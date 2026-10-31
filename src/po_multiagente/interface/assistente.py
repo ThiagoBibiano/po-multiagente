@@ -23,6 +23,7 @@ from po_multiagente.dominio import (
 from po_multiagente.llm import LLMPort
 from po_multiagente.modelo import ErroCompilacao, compilar, para_latex
 from po_multiagente.orquestracao import Estado, Interrupcao, Sessao
+from po_multiagente.rastreabilidade import Dossie, montar_dossie
 
 TipoEtapa = Literal["solicitacoes", "confirmacao", "resultado"]
 
@@ -72,6 +73,7 @@ class Resultado:
     custo: float = 0.0
     moeda: str = ""
     eventos: list[dict[str, Any]] = field(default_factory=list)
+    dossie: Dossie | None = None
 
     @property
     def sentido(self) -> Sentido | None:
@@ -258,4 +260,5 @@ def _resultado(estado: Estado, configuracao: ConfiguracaoExecucao) -> Resultado:
         custo=perfil.custo(entrada, cache, saida),
         moeda=perfil.moeda,
         eventos=list(estado.get("eventos", [])),
+        dossie=montar_dossie(estado, configuracao),
     )

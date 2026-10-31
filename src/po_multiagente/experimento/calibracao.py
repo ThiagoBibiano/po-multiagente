@@ -40,6 +40,7 @@ from po_multiagente.experimento.roteiro import roteiro_do_gabarito
 from po_multiagente.llm import AdaptadorOpenAI, Cassete, LLMPort
 from po_multiagente.orquestracao import Estado, Interrupcao, Sessao
 from po_multiagente.prompts import AGENTES_COM_INSTRUCAO, carregar_instrucao
+from po_multiagente.rastreabilidade import gravar_zip, montar_dossie
 
 ModoLLM = Literal["chamar", "gravar", "reproduzir", "roteiro"]
 MAX_INTERRUPCOES = 6
@@ -261,6 +262,11 @@ def calibrar(
                 medida, estado = executar_instancia(instancia, configuracao, llm, repeticao)
                 medidas.append(medida)
                 _gravar_execucao(caminho, medida, estado)
+                pastas = [instancia.pasta / "dados", instancia.pasta / "dados_tratados"]
+                gravar_zip(
+                    montar_dossie(estado, configuracao, pastas),
+                    saida / "dossies" / f"{rotulo}.zip",
+                )
                 print(_linha(medida), flush=True)
     (saida / "resumo.md").write_text(resumo(medidas), encoding="utf-8")
     with (saida / "medidas.jsonl").open("w", encoding="utf-8") as arquivo:

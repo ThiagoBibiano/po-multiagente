@@ -177,7 +177,7 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 | F1 Núcleo determinístico | `dados`, `modelo` (gramática, checagem, instanciação), `solver` com conformidade, S1–S5; piloto como 1ª instância | Não | Concluída, exceto o piloto (seção 10) |
 | F1b Conjunto de calibração | 36 instâncias (repositório privado, `CALIBRACAO.md`), `validar-instancia` | Não | Concluída: 36/36 válidas |
 | F2 Agentes e orquestração | Porta de LLM, perfis, prompts, os cinco agentes, grafo com e sem Validador, interrupções, gravações | Sim | Concluída: meta atingida na conferência; prompts congelados (seção 11) |
-| F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pendente |
+| F3 Rastreabilidade | Dossiê, manifesto, HTML | Não | Pronta (31/10/2026) |
 | F4 Interface e Colab | Gradio, notebook, Drive, aviso de privacidade; **teste com o usuário** quando a F2 atingir a meta na partição de conferência | — | Mínima implementada (seção 11): Gradio, notebook e aviso. Faltam Drive, retomada e o teste com o usuário |
 | F5 Conjunto-teste (paralelo desde F1) | Formato, `validar-instancia`, 24 instâncias, revisão cruzada | Não | Pendente |
 | F6 Avaliação e experimento | Critérios 1–4, McNemar, taxonomia, executor, exportação `.tex` | Sim | Pronta (31/10/2026), sem a rodada |
@@ -254,4 +254,6 @@ O repositório do TG é **público**. Por isso o conjunto-teste não pode ficar 
 - CLI: `po-multiagente experimento <conjunto>` (duas configurações, três repetições; retoma o lote se a pasta já tiver execuções) e `po-multiagente avaliar <saída> <conjunto>`.
 - Com o roteiro do gabarito, as 36 instâncias de calibração dão 100% nos três critérios.
 
-**Falta para congelar a v1.0:** o dossiê (F3) e a revisão cruzada do conjunto-teste.
+**F3, dossiê:** `rastreabilidade.montar_dossie` monta o dossiê a partir do estado final, sem gabarito. Ele sai como ZIP (`index.html` e um arquivo por artefato) dentro do download da interface e em `dossies/<execução>.zip` de cada lote. O hash final de cada planilha é recalculado, e a página avisa quando uma fonte mudou.
+
+**Falta para congelar a v1.0:** a revisão cruzada do conjunto-teste, levar os branches ao `develop`, a tag e o DOI.
