@@ -207,9 +207,13 @@ def _secao_resposta() -> list[Any]:
         plano = gr.Markdown()
         selo = gr.Markdown()
         arquivo = gr.File(label="Baixar resultados (ZIP)", interactive=False)
-        with gr.Accordion("Detalhes técnicos: decisões, modelo e conferências", open=False):
+        with gr.Accordion(
+            "Detalhes técnicos: decisões, limites, modelo e conferências", open=False
+        ):
             with gr.Tab("Decisões"):
                 decisoes = gr.Markdown()
+            with gr.Tab("Limites e preços-sombra"):
+                limites = gr.Markdown()
             with gr.Tab("Modelo matemático"):
                 modelo = gr.Markdown(latex_delimiters=LATEX)
             with gr.Tab("Conferências"):
@@ -228,6 +232,7 @@ def _secao_resposta() -> list[Any]:
         selo,
         arquivo,
         decisoes,
+        limites,
         modelo,
         conferencias,
         entendimento,
@@ -362,7 +367,7 @@ def _telas(assistente: Assistente, etapa: Etapa, segundos: float = 0.0) -> Telas
     )
 
 
-_SEM_RESPOSTA: Telas = ("", "", "", "", None, "", "", "", "", "", None)
+_SEM_RESPOSTA: Telas = ("", "", "", "", None, "", "", "", "", "", "", None)
 
 
 def _resposta(resultado: Resultado, segundos: float) -> Telas:
@@ -381,6 +386,7 @@ def _resposta(resultado: Resultado, segundos: float) -> Telas:
         apresentacao.selo_conferencia(resultado),
         str(apresentacao.empacotar(resultado, pasta)),
         apresentacao.decisoes(resultado),
+        apresentacao.limites(resultado),
         apresentacao.modelo_legivel(resultado),
         apresentacao.conferencias(resultado.pareceres),
         apresentacao.entendimento(resultado.especificacao),

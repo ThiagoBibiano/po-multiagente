@@ -19,6 +19,7 @@ from po_multiagente.dominio import (
     ParecerValidador,
     Sentido,
     Solicitacao,
+    UsoRestricao,
 )
 from po_multiagente.llm import LLMPort
 from po_multiagente.modelo import ErroCompilacao, compilar, para_latex
@@ -63,6 +64,9 @@ class Resultado:
     valor_objetivo: float | None
     falha: str | None
     solucao: dict[str, float] = field(default_factory=dict)
+    duais: dict[str, float] | None = None
+    custos_reduzidos: dict[str, float] | None = None
+    usos: dict[str, UsoRestricao] = field(default_factory=dict)
     especificacao: Especificacao | None = None
     modelo: ModeloIR | None = None
     formulacao_latex: str | None = None
@@ -250,6 +254,9 @@ def _resultado(estado: Estado, configuracao: ConfiguracaoExecucao) -> Resultado:
         valor_objetivo=resultado.valor_objetivo if resultado else None,
         falha=estado.get("falha"),
         solucao=dict(resultado.valores) if resultado else {},
+        duais=resultado.duais if resultado else None,
+        custos_reduzidos=resultado.custos_reduzidos if resultado else None,
+        usos=dict(resultado.usos) if resultado else {},
         especificacao=especificacao,
         modelo=modelo,
         formulacao_latex=formulacao,

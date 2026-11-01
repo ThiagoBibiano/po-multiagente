@@ -74,6 +74,7 @@ def test_pedido_em_partes_e_resposta_com_detalhes_recolhidos(tmp_path: Path) -> 
     titulos = [m.titulo for m in resposta if m.titulo]
     assert titulos == [
         "Decisões",
+        "Limites e preços-sombra",
         "Modelo matemático",
         "Conferências",
         "Entendimento do pedido",

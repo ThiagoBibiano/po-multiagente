@@ -2,8 +2,9 @@
 
 A interface mostra primeiro o que interessa a quem decide (o resultado, o
 plano e a explicação) e, em detalhes técnicos, os artefatos de cada agente
-(R5) em forma legível: decisões em tabela, modelo com legenda, conferências
-como lista de verificação e o entendimento do problema em texto.
+(R5) em forma legível: decisões em tabela, limites com folga e preço-sombra,
+modelo com legenda, conferências como lista de verificação e o entendimento
+do problema em texto.
 """
 
 import csv
@@ -149,6 +150,53 @@ def decisoes(resultado: Resultado) -> str:
             corpo = [[*m, _valor(variavel, v)] for m, v in valores]
             blocos.append(f"{titulo}\n\n{_tabela([*rotulos, 'Valor'], corpo)}")
     return "\n\n".join(blocos) or "Sem solução para mostrar."
+
+
+def limites(resultado: Resultado) -> str:
+    """Uso, folga e preço-sombra de cada restrição; custos reduzidos das decisões em zero.
+
+    Preços-sombra e custos reduzidos só existem em PL; em PLIM, a seção mostra
+    só o uso e a folga e diz por quê.
+    """
+    if resultado.modelo is None or not resultado.usos:
+        return ""
+    descricoes = {r.id: r.descricao for r in resultado.modelo.restricoes}
+    duais = resultado.duais
+    cabecalho = ["Restrição", "No plano", "Limite", "Folga"]
+    if duais is not None:
+        cabecalho.append("Preço-sombra")
+    corpo = []
+    for nome, uso in resultado.usos.items():
+        linha = [_restricao(nome, descricoes), numero(uso.uso), numero(uso.limite)]
+        linha.append(numero(uso.folga))
+        if duais is not None:
+            linha.append(numero(duais.get(nome, 0.0)))
+        corpo.append(linha)
+    partes = ["#### Limites do problema", _tabela(cabecalho, corpo)]
+    if duais is None:
+        partes.append(
+            "Há decisões inteiras ou sim/não, por isso não aparecem preços-sombra nem "
+            "custos reduzidos: num problema assim, eles não medem o efeito de mudar um limite."
+        )
+        return "\n\n".join(partes)
+    partes.append(
+        "**Preço-sombra:** quanto o objetivo muda se o limite aumentar uma unidade, com o "
+        "resto igual. Vale para variações pequenas; até onde ele vale não é calculado. "
+        "Restrição com folga tem preço-sombra zero: ter mais daquilo não muda o resultado."
+    )
+    reduzidos = [
+        [nome, numero(custo)]
+        for nome, custo in (resultado.custos_reduzidos or {}).items()
+        if abs(resultado.solucao.get(nome, 0.0)) <= _TOLERANCIA and abs(custo) > _TOLERANCIA
+    ]
+    if reduzidos:
+        partes += [
+            "#### Decisões que ficaram em zero",
+            _tabela(["Decisão", "Custo reduzido"], reduzidos),
+            "**Custo reduzido:** quanto o objetivo muda para cada unidade imposta nessa "
+            "decisão, com o resto ajustado da melhor forma.",
+        ]
+    return "\n\n".join(partes)
 
 
 def modelo_legivel(resultado: Resultado) -> str:
@@ -297,6 +345,8 @@ def empacotar(resultado: Resultado, destino: Path) -> Path:
     caminho = destino / "resultado.zip"
     with zipfile.ZipFile(caminho, "w", zipfile.ZIP_DEFLATED) as zip_:
         zip_.writestr("solucao.csv", _csv_solucao(resultado))
+        if resultado.usos:
+            zip_.writestr("restricoes.csv", _csv_restricoes(resultado))
         if resultado.explicacao:
             zip_.writestr("explicacao.md", resultado.explicacao + "\n")
         if resultado.formulacao_latex:
@@ -387,6 +437,14 @@ def _tabela(cabecalho: Sequence[str], linhas: Sequence[Sequence[str]]) -> str:
     return texto
 
 
+def _restricao(nome: str, descricoes: dict[str, str]) -> str:
+    """``limite[Mesa,Março]`` vira ``Descrição da família (Mesa, Março)``."""
+    familia, _, membros = nome.partition("[")
+    texto = descricoes.get(familia, familia)
+    membros = membros.removesuffix("]")
+    return f"{texto} ({membros.replace(',', ', ')})" if membros else texto
+
+
 def _celula(texto: str) -> str:
     return str(texto).replace("|", "\\|").replace("\n", " ")
 
@@ -403,8 +461,27 @@ def _minuscula(texto: str) -> str:
 def _csv_solucao(resultado: Resultado) -> str:
     saida = io.StringIO()
     escritor = csv.writer(saida, delimiter=";")
-    escritor.writerow(["variavel", "indices", "valor"])
+    reduzidos = resultado.custos_reduzidos
+    escritor.writerow(
+        ["variavel", "indices", "valor", *(["custo_reduzido"] if reduzidos is not None else [])]
+    )
     for nome, valor in resultado.solucao.items():
         base, _, resto = nome.partition("[")
-        escritor.writerow([base, resto.rstrip("]"), valor])
+        extra = [reduzidos.get(nome, 0.0)] if reduzidos is not None else []
+        escritor.writerow([base, resto.rstrip("]"), valor, *extra])
+    return saida.getvalue()
+
+
+def _csv_restricoes(resultado: Resultado) -> str:
+    saida = io.StringIO()
+    escritor = csv.writer(saida, delimiter=";")
+    duais = resultado.duais
+    escritor.writerow(
+        ["restricao", "indices", "uso", "limite", "folga"]
+        + (["preco_sombra"] if duais is not None else [])
+    )
+    for nome, uso in resultado.usos.items():
+        base, _, resto = nome.partition("[")
+        extra = [duais.get(nome, 0.0)] if duais is not None else []
+        escritor.writerow([base, resto.rstrip("]"), uso.uso, uso.limite, uso.folga, *extra])
     return saida.getvalue()

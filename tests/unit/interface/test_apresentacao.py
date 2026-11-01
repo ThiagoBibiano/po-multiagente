@@ -1,9 +1,10 @@
 import zipfile
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from po_multiagente.dominio import ModeloIR
+from po_multiagente.dominio import ModeloIR, Quantificador, Restricao, UsoRestricao
 from po_multiagente.interface import Assistente, Resultado
 from po_multiagente.interface import apresentacao as ap
 from po_multiagente.llm import LLMRoteirizado
@@ -60,8 +61,19 @@ def test_pacote_para_baixar(resultado: Resultado, tmp_path: Path) -> None:
     with zipfile.ZipFile(caminho) as zip_:
         nomes = set(zip_.namelist())
         assert {"solucao.csv", "explicacao.md", "formulacao.tex", "modelo.json"} <= nomes
-        assert zip_.read("solucao.csv").decode().startswith("variavel;indices;valor")
+        assert zip_.read("solucao.csv").decode().startswith("variavel;indices;valor;custo_reduzido")
+        assert zip_.read("restricoes.csv").decode().splitlines() == [
+            "restricao;indices;uso;limite;folga;preco_sombra",
+            "marcenaria;;200.0;200.0;0.0;30.0",
+        ]
         assert {"dossie/index.html", "dossie/chamadas.jsonl", "dossie/manifesto.json"} <= nomes
+
+
+def test_limites_com_folga_e_preco_sombra(resultado: Resultado) -> None:
+    limites = ap.limites(resultado)
+    assert "| Restrição | No plano | Limite | Folga | Preço-sombra |" in limites
+    assert "| Horas | 200 | 200 | 0 | 30 |" in limites
+    assert "**Preço-sombra:**" in limites
 
 
 def transporte(tipo: str = "continua") -> ModeloIR:
@@ -125,3 +137,39 @@ def test_binaria_aparece_como_sim_ou_nao_e_tabela_longa_e_cortada() -> None:
     assert "| **F0** | não | **0** |" in ap.decisoes(resultado)
     longa = ap._tabela(["a"], [[str(i)] for i in range(ap.MAX_LINHAS + 5)])
     assert "… e mais 5 linha(s)" in longa
+
+
+def test_limites_com_membros_custo_reduzido_e_plim() -> None:
+    modelo = transporte().model_copy(
+        update={
+            "restricoes": (
+                Restricao(
+                    id="oferta",
+                    descricao="Oferta da fábrica",
+                    requisitos=("REQ1",),
+                    para_todo=(Quantificador(indice="f", conjunto="FABRICAS"),),
+                    expressao="sum(x[f, m] for m in MERCADOS) <= 10",
+                ),
+            )
+        }
+    )
+    usos = {"oferta[A]": UsoRestricao(uso=10.0, limite=10.0)}
+    resultado = Resultado(
+        explicacao=None,
+        status="otimo",
+        valor_objetivo=10.0,
+        falha=None,
+        solucao={"x[A,SP]": 10.0, "x[A,RJ]": 0.0},
+        duais={"oferta[A]": -1.5},
+        custos_reduzidos={"x[A,SP]": 0.0, "x[A,RJ]": 2.0},
+        usos=usos,
+        modelo=modelo,
+    )
+    limites = ap.limites(resultado)
+    assert "| Oferta da fábrica (A) | 10 | 10 | 0 | -1,5 |" in limites
+    assert "| x[A,RJ] | 2 |" in limites
+    assert "x[A,SP]" not in limites
+    plim = ap.limites(replace(resultado, duais=None, custos_reduzidos=None))
+    assert "Preço-sombra" not in plim
+    assert "não aparecem preços-sombra nem custos reduzidos" in plim
+    assert ap.limites(replace(resultado, usos={})) == ""

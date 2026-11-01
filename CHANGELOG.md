@@ -104,6 +104,12 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   código contra o texto do usuário), o usuário as confere e confirma, corrige
   ou anexa as próprias; o que falta vira pergunta. A caixa do chat aceita
   qualquer anexo e lê `.txt`/`.md` como descrição.
+- Limites e preços-sombra: o resultado do solver traz o uso de cada restrição
+  e, em PL, os custos reduzidos (além dos preços-sombra, que já vinham). As
+  duas interfaces ganham a seção "Limites e preços-sombra" (uso, limite,
+  folga, preço-sombra e custo reduzido das decisões em zero; em PLIM, só uso
+  e folga, com o motivo), e o ZIP, `restricoes.csv` e a coluna
+  `custo_reduzido` em `solucao.csv`. O Explicador e as instruções não mudam.
 
 ### Corrigido
 

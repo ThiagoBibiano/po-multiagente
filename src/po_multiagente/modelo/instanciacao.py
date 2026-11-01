@@ -88,6 +88,10 @@ class ModeloInstanciado:
         """Indica se há variável inteira ou binária (PLIM)."""
         return any(v.tipo is not TipoVariavel.CONTINUA for v in self.variaveis)
 
+    def lados_esquerdos(self, valores: Mapping[str, float]) -> list[float]:
+        """Valor do lado esquerdo de cada restrição, na ordem das restrições."""
+        return [sum(c * valores[n] for n, c in r.termos) for r in self.restricoes]
+
     def sem_restricoes(self, familias: set[str]) -> "ModeloInstanciado":
         """Cópia do modelo sem as famílias de restrições indicadas."""
         return ModeloInstanciado(

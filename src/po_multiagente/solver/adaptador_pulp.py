@@ -14,7 +14,13 @@ from pathlib import Path
 
 import pulp
 
-from po_multiagente.dominio import IdentificacaoSolver, ResultadoSolver, Sentido, StatusSolucao
+from po_multiagente.dominio import (
+    IdentificacaoSolver,
+    ResultadoSolver,
+    Sentido,
+    StatusSolucao,
+    UsoRestricao,
+)
 from po_multiagente.modelo import ModeloInstanciado, Relacao
 from po_multiagente.solver.contrato import ErroSolver, ExecucaoSolver, OpcoesSolver
 
@@ -87,19 +93,36 @@ class BackendPulp:
         com_solucao = status in (StatusSolucao.OTIMO, StatusSolucao.LIMITE_TEMPO) and (
             problema.sol_status in _COM_SOLUCAO
         )
+        valores = (
+            {nome: _zero_positivo(v.varValue) for nome, v in variaveis.items()}
+            if com_solucao
+            else {}
+        )
+        # Duais e custos reduzidos só valem no ótimo de um PL (em PLIM, o CBC
+        # devolve os da última relaxação, que não dizem nada sobre o inteiro).
+        com_duais = status is StatusSolucao.OTIMO and not modelo.inteiro
         resultado = ResultadoSolver(
             status=status,
             solver=identificacao(),
             valor_objetivo=_zero_positivo(pulp.value(problema.objective)) if com_solucao else None,
-            valores=(
-                {nome: _zero_positivo(v.varValue) for nome, v in variaveis.items()}
-                if com_solucao
-                else {}
-            ),
+            valores=valores,
             duais=(
                 {nome: _zero_positivo(r.pi) for nome, r in restricoes.items()}
-                if status is StatusSolucao.OTIMO and not modelo.inteiro
+                if com_duais
                 else None
+            ),
+            custos_reduzidos=(
+                {nome: _zero_positivo(v.dj) for nome, v in variaveis.items()} if com_duais else None
+            ),
+            usos=(
+                {
+                    r.nome: UsoRestricao(uso=_zero_positivo(uso), limite=r.lado_direito)
+                    for r, uso in zip(
+                        modelo.restricoes, modelo.lados_esquerdos(valores), strict=True
+                    )
+                }
+                if valores
+                else {}
             ),
             tempo_segundos=max(problema.solutionTime or 0.0, 0.0),
         )

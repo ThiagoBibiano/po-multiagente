@@ -518,6 +518,7 @@ def mensagens_do_resultado(
     destino = Path(tempfile.mkdtemp(prefix="po-resultado-", dir=pasta))
     detalhes = [
         ("Decisões", apresentacao.decisoes(resultado)),
+        ("Limites e preços-sombra", apresentacao.limites(resultado)),
         ("Modelo matemático", apresentacao.modelo_legivel(resultado)),
         ("Conferências", apresentacao.conferencias(resultado.pareceres)),
         ("Entendimento do pedido", apresentacao.entendimento(resultado.especificacao)),
