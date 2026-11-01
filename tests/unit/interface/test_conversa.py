@@ -329,3 +329,25 @@ def test_texto_anexado_vira_descricao_e_formato_desconhecido_avisa(tmp_path: Pat
     resposta = c.responder("", [descricao, pdf, *dados(pasta)])
     assert "Não consigo ler `manual.pdf`" in resposta[0].texto
     assert fase(c) == "resultado"
+
+
+def test_texto_para_copiar_e_copia_na_pasta_visivel(tmp_path: Path) -> None:
+    llm = roteiro(organizador=[TABELAS])
+    c = Conversa(
+        lambda: Assistente(llm, pasta_trabalho=tmp_path / "trabalho"),
+        tmp_path / "c",
+        organizador=Organizador(llm),
+        copias=tmp_path / "content",
+    )
+    proposta = c.responder(DESCRICAO_COM_NUMEROS)
+    bloco = next(m for m in proposta if m.titulo == "capacidade.csv: texto para copiar")
+    assert bloco.texto == "```csv\nHoras no mês\n200\n```"
+    assert "Também salvei uma cópia" in proposta[-1].texto
+    assert sorted(p.name for p in (tmp_path / "content").rglob("*.csv")) == [
+        "capacidade.csv",
+        "produtos.csv",
+    ]
+    resposta = c.responder(USAR)
+    baixar = next(m for m in resposta if m.arquivo)
+    assert "Também salvei uma cópia" in baixar.texto
+    assert list((tmp_path / "content").rglob("resultado.zip"))

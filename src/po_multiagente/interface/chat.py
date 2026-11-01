@@ -35,6 +35,7 @@ def construir_chat(
     criar_assistente: Callable[[], Assistente],
     modelo: str = "",
     organizador: Organizador | None = None,
+    copias: Path | None = None,
 ) -> gr.Blocks:
     """Monta a interface de chat.
 
@@ -43,10 +44,12 @@ def construir_chat(
         modelo: Nome do modelo, para o aviso de privacidade.
         organizador: Monta tabelas com os números da conversa quando o
             usuário não tem planilhas (ADR-015).
+        copias: Pasta para uma cópia de cada arquivo oferecido (no Colab,
+            visível no painel de arquivos).
     """
 
     def nova_conversa() -> Conversa:
-        return Conversa(criar_assistente, organizador=organizador)
+        return Conversa(criar_assistente, organizador=organizador, copias=copias)
 
     app = gr.Blocks(title="Otimização de decisões")
     with app:

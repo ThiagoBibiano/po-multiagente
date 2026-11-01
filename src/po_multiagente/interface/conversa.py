@@ -27,6 +27,7 @@ import time
 import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -105,6 +106,9 @@ class Conversa:
             temporária.
         organizador: Monta tabelas com os números da conversa quando o
             usuário não tem planilhas; sem ele, as planilhas são obrigatórias.
+        copias: Pasta onde guardar também uma cópia de cada arquivo oferecido
+            para baixar. No Colab, é uma pasta de ``/content``, que aparece no
+            painel de arquivos: o download pelo chat depende do proxy do Colab.
     """
 
     def __init__(
@@ -112,8 +116,10 @@ class Conversa:
         criar_assistente: Callable[[], Assistente],
         pasta: Path | None = None,
         organizador: Organizador | None = None,
+        copias: Path | None = None,
     ) -> None:
         self._criar = criar_assistente
+        self._copias = copias
         self._organizador = organizador
         self._registro = Registro()
         self._propostas: list[Path] = []
@@ -261,6 +267,7 @@ class Conversa:
                 Mensagem(f"⚠️ Não consegui montar as tabelas: {erro}. Pode reescrever os dados?")
             ]
         self.fase = "dados"
+        copia = guardar_copia(self._propostas, self._copias, "tabelas")
         return [
             Mensagem(
                 "Montei estas tabelas **só com os números que você escreveu**, já lidas "
@@ -271,7 +278,15 @@ class Conversa:
                 "que mudar; se preferir, anexe suas planilhas.",
                 opcoes=(USAR, CORRIGIR),
             ),
+            *(
+                Mensagem(
+                    f"```csv\n{caminho.read_text(encoding='utf-8')}```",
+                    titulo=f"{caminho.name}: texto para copiar",
+                )
+                for caminho in self._propostas
+            ),
             *(Mensagem(arquivo=caminho) for caminho in self._propostas),
+            *([Mensagem(copia)] if copia else []),
         ]
 
     def _conferir_dados(
@@ -393,7 +408,10 @@ class Conversa:
                     "você conferiu."
                 )
             )
-        return [*mensagens, *mensagens_do_resultado(resultado, segundos, self._raiz)]
+        return [
+            *mensagens,
+            *mensagens_do_resultado(resultado, segundos, self._raiz, self._copias),
+        ]
 
     def _alertas(self, especificacao: Especificacao | None) -> list[Mensagem]:
         if especificacao is None:
@@ -469,7 +487,9 @@ def texto_alerta(alerta: AlertaAmbiguidade, especificacao: Especificacao) -> str
     )
 
 
-def mensagens_do_resultado(resultado: Resultado, segundos: float, pasta: Path) -> list[Mensagem]:
+def mensagens_do_resultado(
+    resultado: Resultado, segundos: float, pasta: Path, copias: Path | None = None
+) -> list[Mensagem]:
     """A resposta primeiro; os detalhes técnicos (R5) recolhidos; o arquivo para baixar."""
     if not resultado.explicacao:
         motivo = resultado.falha or f"status do solver: {resultado.status or 'sem resultado'}"
@@ -503,19 +523,36 @@ def mensagens_do_resultado(resultado: Resultado, segundos: float, pasta: Path) -
         ("Entendimento do pedido", apresentacao.entendimento(resultado.especificacao)),
         ("Execução", apresentacao.consumo(resultado, segundos)),
     ]
+    pacote = apresentacao.empacotar(resultado, destino)
+    copia = guardar_copia([pacote], copias, "resultado")
     return [
         Mensagem(principal),
         *(Mensagem(texto, titulo=titulo) for titulo, texto in detalhes if texto),
         Mensagem(
             "Resultados para baixar: plano em CSV, modelo, conferências e o dossiê "
-            "completo da execução (abra `dossie/index.html`).",
-            arquivo=apresentacao.empacotar(resultado, destino),
+            "completo da execução (abra `dossie/index.html`)." + (f" {copia}" if copia else ""),
+            arquivo=pacote,
         ),
         Mensagem(
             "Quer ajustar algo? Escreva o que mudar, e eu refaço com os mesmos dados. "
             "Para um problema novo, clique em *Nova conversa*."
         ),
     ]
+
+
+def guardar_copia(arquivos: Sequence[Path], destino: Path | None, rotulo: str) -> str:
+    """Copia os arquivos para ``destino`` e devolve o aviso ao usuário; sem destino, nada."""
+    if destino is None or not arquivos:
+        return ""
+    pasta = destino / f"{datetime.now():%Y%m%d-%H%M%S}-{rotulo}"
+    pasta.mkdir(parents=True, exist_ok=True)
+    for arquivo in arquivos:
+        shutil.copy(arquivo, pasta / arquivo.name)
+    return (
+        f"Também salvei uma cópia em `{pasta}`. No Colab, abra o painel de arquivos "
+        "(ícone de pasta, à esquerda), clique com o botão direito no arquivo e escolha "
+        "*Fazer download*."
+    )
 
 
 def gravar_tabela(tabela: TabelaProposta, pasta: Path) -> Path:

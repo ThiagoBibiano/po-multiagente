@@ -71,6 +71,9 @@ _EXEMPLO_DESCRICAO = (
 )
 LATEX: list[dict[str, str | bool]] = [{"left": "$$", "right": "$$", "display": True}]
 
+PASTA_NO_COLAB = Path("/content/po-multiagente")
+"""Cópias dos arquivos para baixar, visíveis no painel de arquivos do Colab."""
+
 ALTURA_NO_COLAB = 900
 """Altura, em pixels, da interface embutida no notebook (o padrão do Gradio é 500)."""
 
@@ -261,7 +264,10 @@ def iniciar(
         from po_multiagente.interface.chat import construir_chat  # noqa: PLC0415 — evita ciclo
 
         organizador = Organizador(llm, configuracao.max_tentativas_formato)
-        app = construir_chat(criar, modelo=perfil_modelo.modelo, organizador=organizador)
+        copias = PASTA_NO_COLAB if _no_colab() else None
+        app = construir_chat(
+            criar, modelo=perfil_modelo.modelo, organizador=organizador, copias=copias
+        )
     else:
         app = construir_app(criar, modelo=perfil_modelo.modelo)
     if compartilhar or not _no_colab():
