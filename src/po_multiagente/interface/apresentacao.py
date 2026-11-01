@@ -46,6 +46,16 @@ _SINAIS = {
     Sinal.S4: "Requisitos do pedido",
     Sinal.S5: "Plausibilidade do resultado",
 }
+MOTIVOS = {
+    "granularidade": (
+        "está em outro período ou nível de detalhe (por exemplo, semanal em vez de mensal)"
+    ),
+    "unidade": "está em outra unidade de medida",
+    "identificador": "usa códigos que precisam ser trocados pelos nomes",
+    "juncao": "precisa ser combinado com outra tabela",
+    "faltante": "não foi encontrado nas planilhas",
+}
+"""Motivo de cada solicitação de tratamento, em palavras do usuário."""
 _TIPOS = {
     TipoVariavel.CONTINUA: "contínua",
     TipoVariavel.INTEIRA: "inteira",

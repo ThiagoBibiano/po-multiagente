@@ -16,7 +16,7 @@ import time
 from collections.abc import Callable, Sequence
 from importlib.resources import files
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import gradio as gr
 from pydantic import BaseModel
@@ -59,7 +59,7 @@ unidade, como `Margem (R$/un)` ou `Horas de montagem no mês`.
 
 Não sabe por onde começar? Clique em **Carregar exemplo**.
 """
-_PRIVACIDADE = (
+PRIVACIDADE = (
     "*Privacidade: o texto e as planilhas são enviados ao modelo de linguagem "
     "({modelo}). No nível gratuito, o provedor pode usá-los para melhorar os produtos; "
     "evite dados pessoais ou sigilosos.*"
@@ -68,16 +68,7 @@ _EXEMPLO_DESCRICAO = (
     "Ex.: Fabricamos mesas e cadeiras e queremos saber quanto produzir de cada uma para "
     "ter a maior margem, sem passar da madeira e das horas de montagem disponíveis no mês."
 )
-_MOTIVOS = {
-    "granularidade": (
-        "está em outro período ou nível de detalhe (por exemplo, semanal em vez de mensal)"
-    ),
-    "unidade": "está em outra unidade de medida",
-    "identificador": "usa códigos que precisam ser trocados pelos nomes",
-    "juncao": "precisa ser combinado com outra tabela",
-    "faltante": "não foi encontrado nas planilhas",
-}
-_LATEX: list[dict[str, str | bool]] = [{"left": "$$", "right": "$$", "display": True}]
+LATEX: list[dict[str, str | bool]] = [{"left": "$$", "right": "$$", "display": True}]
 
 ALTURA_NO_COLAB = 900
 """Altura, em pixels, da interface embutida no notebook (o padrão do Gradio é 500)."""
@@ -158,7 +149,7 @@ def construir_app(criar_assistente: Callable[[], Assistente], modelo: str = "") 
 
         resposta = _secao_resposta()
 
-        gr.Markdown(_PRIVACIDADE.format(modelo=modelo or "configurado"))
+        gr.Markdown(PRIVACIDADE.format(modelo=modelo or "configurado"))
 
         telas = [
             assistente,
@@ -216,7 +207,7 @@ def _secao_resposta() -> list[Any]:
             with gr.Tab("Decisões"):
                 decisoes = gr.Markdown()
             with gr.Tab("Modelo matemático"):
-                modelo = gr.Markdown(latex_delimiters=_LATEX)
+                modelo = gr.Markdown(latex_delimiters=LATEX)
             with gr.Tab("Conferências"):
                 conferencias = gr.Markdown()
             with gr.Tab("Entendimento do pedido"):
@@ -241,7 +232,12 @@ def _secao_resposta() -> list[Any]:
     ]
 
 
-def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
+def iniciar(
+    perfil: str | None = None,
+    *,
+    compartilhar: bool = False,
+    interface: Literal["etapas", "chat"] = "etapas",
+) -> None:
     """Abre a interface (no Colab, dentro do próprio notebook).
 
     A chave do modelo vem da variável de ambiente do perfil (por exemplo,
@@ -250,12 +246,18 @@ def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
     Args:
         perfil: Perfil do modelo; o padrão é o do experimento.
         compartilhar: Gera um link público temporário do Gradio.
+        interface: ``etapas`` (formulário em passos) ou ``chat`` (conversa).
     """
     configuracao = ConfiguracaoExecucao(perfil_modelo=perfil) if perfil else ConfiguracaoExecucao()
     perfil_modelo = carregar_perfil(configuracao.perfil_modelo)
     _ler_segredo_do_colab(perfil_modelo.variavel_chave)
     llm = AdaptadorOpenAI(perfil_modelo)
-    app = construir_app(lambda: Assistente(llm, configuracao), modelo=perfil_modelo.modelo)
+    construir = construir_app
+    if interface == "chat":
+        from po_multiagente.interface.chat import construir_chat  # noqa: PLC0415 — evita ciclo
+
+        construir = construir_chat
+    app = construir(lambda: Assistente(llm, configuracao), modelo=perfil_modelo.modelo)
     if compartilhar or not _no_colab():
         app.launch(share=compartilhar, show_error=True)
         return
@@ -290,7 +292,7 @@ def formatar_solicitacoes(etapa: Etapa) -> str:
     ]
     for numero, solicitacao in enumerate(etapa.solicitacoes, start=1):
         coluna = f", coluna `{solicitacao.coluna}`" if solicitacao.coluna else ""
-        motivo = _MOTIVOS.get(solicitacao.motivo.value, solicitacao.motivo.value)
+        motivo = apresentacao.MOTIVOS.get(solicitacao.motivo.value, solicitacao.motivo.value)
         linhas.append(
             f"{numero}. Planilha `{solicitacao.arquivo}`{coluna}: o dado {motivo}. "
             f"Como deve ficar: {solicitacao.forma_esperada}"

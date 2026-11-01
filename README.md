@@ -43,6 +43,15 @@ esclarecer os dados que a plataforma não conseguir ler e ver o resultado, com
 a explicação primeiro e a formulação, a especificação e as validações em abas.
 O botão *Carregar exemplo* traz o piloto da marcenaria.
 
+`iniciar(interface="chat")` abre a mesma plataforma em forma de conversa. Você
+descreve o problema e anexa as planilhas na caixa de mensagem, em uma ou várias
+mensagens. A plataforma pergunta no chat quando precisa de uma planilha ajustada
+ou quando um resultado parece suspeito, e avisa os trechos do pedido que admitiam
+mais de uma leitura. Depois da resposta, um texto livre vira ajuste do pedido:
+a plataforma refaz com as mesmas planilhas, depois de você confirmar. Os
+detalhes técnicos ficam em blocos recolhidos, e o dossiê vem no arquivo para
+baixar.
+
 ## Para quem pesquisa
 
 O pacote inclui o experimento pareado com e sem o agente Validador e a

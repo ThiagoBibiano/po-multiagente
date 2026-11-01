@@ -93,6 +93,13 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   `index.html`, no download da interface e em `dossies/` de cada lote do
   experimento.
 
+- Interface de chat (`iniciar(interface="chat")`): o mesmo fluxo em forma de
+  conversa, com pedido e planilhas em uma ou várias mensagens, andamento ao
+  vivo, solicitações e conferência do resultado como perguntas (com respostas
+  rápidas), alertas de ambiguidade com a leitura adotada, ajuste do pedido
+  depois da resposta e detalhes técnicos recolhidos. A lógica fica em
+  `interface.conversa`, sem Gradio; agentes, grafo e instruções não mudam.
+
 ### Corrigido
 
 - "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que
