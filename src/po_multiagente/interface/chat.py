@@ -1,11 +1,13 @@
 """Interface de chat (Gradio) sobre a ``Conversa``.
 
-O usuário descreve o problema e anexa as planilhas numa caixa de mensagem; a
-plataforma responde no chat. Enquanto o fluxo roda, um bloco "Andamento"
-mostra cada passo ao vivo. Pedidos de planilha ajustada e a conferência de um
-resultado suspeito (ADR-011) chegam como perguntas, com respostas rápidas
-quando cabem. A resposta vem primeiro; os detalhes técnicos (R5) ficam em
-blocos recolhidos, e o dossiê, no arquivo para baixar.
+O usuário descreve o problema e, se tiver, anexa as planilhas numa caixa de
+mensagem; sem planilhas, o Organizador monta tabelas com os números da conversa
+para ele conferir (ADR-015). A plataforma responde no chat. Enquanto o fluxo
+roda, um bloco "Andamento" mostra cada passo ao vivo. Pedidos de planilha
+ajustada e a conferência de um resultado suspeito (ADR-011) chegam como
+perguntas, com respostas rápidas quando cabem. A resposta vem primeiro; os
+detalhes técnicos (R5) ficam em blocos recolhidos, e o dossiê, no arquivo para
+baixar.
 """
 
 import queue
@@ -17,6 +19,7 @@ from typing import Any
 
 import gradio as gr
 
+from po_multiagente.agentes import Organizador
 from po_multiagente.interface.app import LATEX, PRIVACIDADE, carregar_exemplo
 from po_multiagente.interface.assistente import Assistente
 from po_multiagente.interface.conversa import BOAS_VINDAS, Conversa, Mensagem
@@ -28,13 +31,23 @@ ESPERA_S = 0.3
 """Intervalo entre atualizações do andamento na tela."""
 
 
-def construir_chat(criar_assistente: Callable[[], Assistente], modelo: str = "") -> gr.Blocks:
+def construir_chat(
+    criar_assistente: Callable[[], Assistente],
+    modelo: str = "",
+    organizador: Organizador | None = None,
+) -> gr.Blocks:
     """Monta a interface de chat.
 
     Args:
         criar_assistente: Cria um assistente novo para cada problema.
         modelo: Nome do modelo, para o aviso de privacidade.
+        organizador: Monta tabelas com os números da conversa quando o
+            usuário não tem planilhas (ADR-015).
     """
+
+    def nova_conversa() -> Conversa:
+        return Conversa(criar_assistente, organizador=organizador)
+
     app = gr.Blocks(title="Otimização de decisões")
     with app:
         estado = gr.State(None)
@@ -48,8 +61,7 @@ def construir_chat(criar_assistente: Callable[[], Assistente], modelo: str = "")
             buttons=["copy"],
         )
         caixa = gr.MultimodalTextbox(
-            placeholder="Descreva o problema e anexe as planilhas (CSV ou Excel)…",
-            file_types=[".csv", ".xlsx"],
+            placeholder="Descreva o problema; se tiver planilhas (CSV ou Excel), anexe…",
             file_count="multiple",
             show_label=False,
             autofocus=True,
@@ -64,7 +76,7 @@ def construir_chat(criar_assistente: Callable[[], Assistente], modelo: str = "")
         ) -> Iterator[Saida]:
             mensagem = mensagem or {}
             yield from turno(
-                conversa or Conversa(criar_assistente),
+                conversa or nova_conversa(),
                 historico,
                 str(mensagem.get("text") or ""),
                 [Path(f) for f in mensagem.get("files") or []],
@@ -73,13 +85,11 @@ def construir_chat(criar_assistente: Callable[[], Assistente], modelo: str = "")
         def ao_escolher(
             historico: Historico, conversa: Conversa | None, evento: gr.SelectData
         ) -> Iterator[Saida]:
-            yield from turno(conversa or Conversa(criar_assistente), historico, str(evento.value))
+            yield from turno(conversa or nova_conversa(), historico, str(evento.value))
 
         def ao_usar_exemplo(historico: Historico, conversa: Conversa | None) -> Iterator[Saida]:
             descricao, arquivos = carregar_exemplo()
-            yield from turno(
-                Conversa(criar_assistente), historico, descricao, [Path(a) for a in arquivos]
-            )
+            yield from turno(nova_conversa(), historico, descricao, [Path(a) for a in arquivos])
 
         saidas = [chat, estado, caixa]
         caixa.submit(ao_enviar, [caixa, chat, estado], saidas, show_progress="hidden")

@@ -21,6 +21,7 @@ from typing import Any, Literal
 import gradio as gr
 from pydantic import BaseModel
 
+from po_multiagente.agentes import Organizador
 from po_multiagente.config import ConfiguracaoExecucao, carregar_perfil
 from po_multiagente.interface import apresentacao
 from po_multiagente.interface.assistente import Assistente, ErroAssistente, Etapa, Resultado
@@ -252,12 +253,17 @@ def iniciar(
     perfil_modelo = carregar_perfil(configuracao.perfil_modelo)
     _ler_segredo_do_colab(perfil_modelo.variavel_chave)
     llm = AdaptadorOpenAI(perfil_modelo)
-    construir = construir_app
+
+    def criar() -> Assistente:
+        return Assistente(llm, configuracao)
+
     if interface == "chat":
         from po_multiagente.interface.chat import construir_chat  # noqa: PLC0415 — evita ciclo
 
-        construir = construir_chat
-    app = construir(lambda: Assistente(llm, configuracao), modelo=perfil_modelo.modelo)
+        organizador = Organizador(llm, configuracao.max_tentativas_formato)
+        app = construir_chat(criar, modelo=perfil_modelo.modelo, organizador=organizador)
+    else:
+        app = construir_app(criar, modelo=perfil_modelo.modelo)
     if compartilhar or not _no_colab():
         app.launch(share=compartilhar, show_error=True)
         return

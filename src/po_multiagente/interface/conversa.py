@@ -3,20 +3,24 @@
 Cada mensagem do usuário (texto e anexos) avança a conversa conforme a fase:
 
 - **pedido:** junta a descrição e as planilhas, em uma ou várias mensagens, e
-  executa quando tem as duas;
+  executa quando tem as duas. Sem planilha, o Organizador (ADR-015) monta
+  tabelas com os números escritos na conversa;
+- **dados:** o usuário confere essas tabelas, já lidas como o fluxo vai usá-las,
+  e confirma, corrige ou anexa planilhas;
 - **solicitações:** o fluxo pediu planilhas ajustadas; os anexos respondem a
   elas, pelo nome do arquivo ou pela ordem da lista;
 - **confirmação:** o resultado coincide com uma cota trivial (ADR-011); o
   usuário diz se faz sentido e, se não, o que falta;
 - **resultado:** a resposta foi dada; um texto vira ajuste do pedido (o fluxo
-  é refeito com as mesmas planilhas, depois de confirmado), e anexos começam
-  um problema novo.
+  é refeito com os mesmos dados, depois de confirmado), e anexos começam um
+  problema novo.
 
 Os pontos que o Interpretador marcou como ambíguos aparecem no chat, com a
 leitura adotada, sem interromper o fluxo. Nada aqui muda os agentes nem o
 grafo: a conversa só traduz as interrupções que já existem.
 """
 
+import csv
 import shutil
 import tempfile
 import time
@@ -26,12 +30,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from po_multiagente.agentes import ErroAgente, Registro
+from po_multiagente.agentes.organizador import DadosOrganizados, Organizador, TabelaProposta
+from po_multiagente.dados import Celula, ErroDados, ler_csv
 from po_multiagente.dominio import AlertaAmbiguidade, Especificacao, Solicitacao
 from po_multiagente.interface import apresentacao
 from po_multiagente.interface.assistente import Assistente, ErroAssistente, Etapa, Resultado
 from po_multiagente.llm import ErroLLM
 
-Fase = Literal["pedido", "solicitacoes", "confirmacao", "observacao", "resultado", "ajuste"]
+Fase = Literal[
+    "pedido", "dados", "solicitacoes", "confirmacao", "observacao", "resultado", "ajuste"
+]
 Progresso = Callable[[str], None]
 
 SIM = "Sim, faz sentido"
@@ -39,6 +48,12 @@ NAO = "Não faz sentido"
 REFAZER = "Refazer com esse ajuste"
 NOVO = "Começar um problema novo"
 SEGUIR_SEM = "Seguir sem esse ajuste"
+USAR = "Usar estas tabelas"
+CORRIGIR = "Quero corrigir"
+
+DADOS = frozenset({".csv", ".xlsx"})
+TEXTOS = frozenset({".txt", ".md"})
+ORGANIZANDO = "Organizador: montando tabelas com os números que você escreveu"
 
 BOAS_VINDAS = """\
 Olá! Eu ajudo a decidir quanto produzir, comprar, transportar ou misturar para \
@@ -50,8 +65,9 @@ do seu negócio.
 - o que quer maximizar ou minimizar (por exemplo, a margem total);
 - quais limites existem (por exemplo, a madeira e as horas de montagem do mês).
 
-E **anexe as planilhas** com os números (CSV ou Excel, uma tabela por arquivo ou \
-aba, com cabeçalho). Os números vêm sempre das planilhas, e não do texto.
+Se tiver os números em **planilhas** (CSV ou Excel), anexe aqui. Se não tiver, \
+escreva os números na conversa: eu monto as tabelas para você conferir antes de \
+usar, e pergunto o que faltar.
 
 Pode mandar tudo numa mensagem ou em partes. Se quiser ver como funciona, use o \
 exemplo da marcenaria."""
@@ -87,12 +103,21 @@ class Conversa:
             para cada refação com ajuste).
         pasta: Onde guardar as planilhas recebidas; o padrão é uma pasta
             temporária.
+        organizador: Monta tabelas com os números da conversa quando o
+            usuário não tem planilhas; sem ele, as planilhas são obrigatórias.
     """
 
     def __init__(
-        self, criar_assistente: Callable[[], Assistente], pasta: Path | None = None
+        self,
+        criar_assistente: Callable[[], Assistente],
+        pasta: Path | None = None,
+        organizador: Organizador | None = None,
     ) -> None:
         self._criar = criar_assistente
+        self._organizador = organizador
+        self._registro = Registro()
+        self._propostas: list[Path] = []
+        self._dados_da_conversa = False
         self._raiz = pasta or Path(tempfile.mkdtemp(prefix="po-conversa-"))
         self._recebidos = 0
         self.fase: Fase = "pedido"
@@ -117,18 +142,38 @@ class Conversa:
             arquivos: Planilhas anexadas.
             ao_progresso: Recebe a descrição de cada passo do fluxo enquanto ele roda.
         """
-        texto = texto.strip()
-        recebidos = self._guardar(arquivos)
+        dados = [a for a in arquivos if Path(a).suffix.lower() in DADOS]
+        textos = [a for a in arquivos if Path(a).suffix.lower() in TEXTOS]
+        outros = [a for a in arquivos if a not in dados and a not in textos]
+        texto = "\n\n".join(
+            [texto.strip(), *(Path(a).read_text(encoding="utf-8").strip() for a in textos)]
+        ).strip()
+        aviso = (
+            [
+                Mensagem(
+                    "Não consigo ler "
+                    + ", ".join(f"`{Path(a).name}`" for a in outros)
+                    + ". Leio planilhas CSV ou Excel e textos .txt ou .md."
+                )
+            ]
+            if outros
+            else []
+        )
+        if outros and not texto and not dados:
+            return aviso
+        recebidos = self._guardar(dados)
         try:
-            return self._responder(texto, recebidos, ao_progresso)
-        except (ErroAssistente, ErroLLM) as erro:
-            return [Mensagem(f"⚠️ {erro}")]
+            return [*aviso, *self._responder(texto, recebidos, ao_progresso)]
+        except (ErroAssistente, ErroLLM, ErroAgente) as erro:
+            return [*aviso, Mensagem(f"⚠️ {erro}")]
 
     # ------------------------------------------------------------- fases
 
     def _responder(
         self, texto: str, arquivos: list[Path], ao_progresso: Progresso | None
     ) -> list[Mensagem]:
+        if self.fase == "dados":
+            return self._conferir_dados(texto, arquivos, ao_progresso)
         if self.fase == "solicitacoes":
             return self._tratar(texto, arquivos, ao_progresso)
         if self.fase == "confirmacao":
@@ -138,21 +183,26 @@ class Conversa:
         if self.fase == "ajuste":
             return self._decidir_ajuste(texto, arquivos, ao_progresso)
         if self.fase == "resultado":
-            if arquivos:
-                self._reiniciar()
-                return self._pedido(texto, arquivos, ao_progresso)
-            if not texto:
-                return []
-            self._ajuste = texto
-            self.fase = "ajuste"
-            return [
-                Mensagem(
-                    f"Posso refazer a análise com as mesmas planilhas, acrescentando ao "
-                    f"pedido: «{texto}». Quer que eu refaça, ou é um problema novo?",
-                    opcoes=(REFAZER, NOVO),
-                )
-            ]
+            return self._depois_do_resultado(texto, arquivos, ao_progresso)
         return self._pedido(texto, arquivos, ao_progresso)
+
+    def _depois_do_resultado(
+        self, texto: str, arquivos: list[Path], ao_progresso: Progresso | None
+    ) -> list[Mensagem]:
+        if arquivos:
+            self._reiniciar()
+            return self._pedido(texto, arquivos, ao_progresso)
+        if not texto:
+            return []
+        self._ajuste = texto
+        self.fase = "ajuste"
+        return [
+            Mensagem(
+                f"Posso refazer a análise com os mesmos dados, acrescentando ao pedido: "
+                f"«{texto}». Quer que eu refaça, ou é um problema novo?",
+                opcoes=(REFAZER, NOVO),
+            )
+        ]
 
     def _pedido(
         self, texto: str, arquivos: list[Path], ao_progresso: Progresso | None
@@ -163,6 +213,8 @@ class Conversa:
         if not self._descricao and not self._arquivos:
             return [Mensagem("Me conte o que você quer decidir e anexe as planilhas.")]
         if not self._arquivos:
+            if self._organizador is not None:
+                return self._organizar(ao_progresso)
             return [
                 Mensagem(
                     "Entendi o pedido. Agora **anexe as planilhas** com os números (CSV ou "
@@ -179,6 +231,65 @@ class Conversa:
             ]
         descricao, planilhas = self._descricao, list(self._arquivos)
         return self._rodar(lambda a: a.comecar(descricao, planilhas), ao_progresso, novo=True)
+
+    def _organizar(self, ao_progresso: Progresso | None) -> list[Mensagem]:
+        """Tabelas com os números da conversa, para o usuário conferir."""
+        assert self._organizador is not None
+        if ao_progresso is not None:
+            ao_progresso(ORGANIZANDO)
+        dados = self._organizador.organizar(self._descricao, self._registro)
+        faltam = _faltantes(dados)
+        if not dados.tabelas:
+            self.fase = "pedido"
+            return [
+                Mensagem(
+                    "Para resolver, preciso dos números do problema. Se tiver planilhas, "
+                    "anexe aqui. Se não tiver, escreva os dados na conversa."
+                    + (f"\n\n{faltam}" if faltam else "")
+                )
+            ]
+        self._recebidos += 1
+        pasta = self._raiz / f"tabelas_{self._recebidos}"
+        try:
+            self._propostas = [gravar_tabela(t, pasta) for t in dados.tabelas]
+            vistas = [
+                _tabela_lida(t, c) for t, c in zip(dados.tabelas, self._propostas, strict=True)
+            ]
+        except ErroDados as erro:
+            self.fase = "pedido"
+            return [
+                Mensagem(f"⚠️ Não consegui montar as tabelas: {erro}. Pode reescrever os dados?")
+            ]
+        self.fase = "dados"
+        return [
+            Mensagem(
+                "Montei estas tabelas **só com os números que você escreveu**, já lidas "
+                "como vou usá-las. Confira:\n\n"
+                + "\n\n".join(vistas)
+                + (f"\n\n{faltam}" if faltam else "")
+                + "\n\nSe estiver certo, confirme. Para corrigir ou completar, escreva o "
+                "que mudar; se preferir, anexe suas planilhas.",
+                opcoes=(USAR, CORRIGIR),
+            ),
+            *(Mensagem(arquivo=caminho) for caminho in self._propostas),
+        ]
+
+    def _conferir_dados(
+        self, texto: str, arquivos: list[Path], ao_progresso: Progresso | None
+    ) -> list[Mensagem]:
+        if arquivos:
+            self._propostas = []
+            self.fase = "pedido"
+            return self._pedido(texto, arquivos, ao_progresso)
+        if texto == USAR or (texto != CORRIGIR and _afirmativa(texto)):
+            self._arquivos = list(self._propostas)
+            self._dados_da_conversa = True
+            descricao, planilhas = self._descricao, list(self._arquivos)
+            return self._rodar(lambda a: a.comecar(descricao, planilhas), ao_progresso, novo=True)
+        if texto == CORRIGIR or not texto:
+            return [Mensagem("Escreva o que corrigir ou completar nos dados.")]
+        self._descricao = f"{self._descricao}\n\n{texto}"
+        return self._organizar(ao_progresso)
 
     def _tratar(
         self, texto: str, arquivos: list[Path], ao_progresso: Progresso | None
@@ -275,6 +386,13 @@ class Conversa:
             perguntas = "\n\n".join(etapa.perguntas)
             return [*mensagens, Mensagem(perguntas, opcoes=(SIM, NAO))]
         self.fase = "resultado"
+        if self._dados_da_conversa:
+            mensagens.append(
+                Mensagem(
+                    "Os números vieram das tabelas que montei com os dados da conversa e "
+                    "você conferiu."
+                )
+            )
         return [*mensagens, *mensagens_do_resultado(resultado, segundos, self._raiz)]
 
     def _alertas(self, especificacao: Especificacao | None) -> list[Mensagem]:
@@ -302,6 +420,8 @@ class Conversa:
         self._assistente = None
         self._etapa = None
         self._ajuste = ""
+        self._propostas = []
+        self._dados_da_conversa = False
 
 
 # ------------------------------------------------------------------ textos
@@ -392,10 +512,46 @@ def mensagens_do_resultado(resultado: Resultado, segundos: float, pasta: Path) -
             arquivo=apresentacao.empacotar(resultado, destino),
         ),
         Mensagem(
-            "Quer ajustar algo? Escreva o que mudar, e eu refaço com as mesmas "
-            "planilhas. Para um problema novo, anexe outras planilhas."
+            "Quer ajustar algo? Escreva o que mudar, e eu refaço com os mesmos dados. "
+            "Para um problema novo, clique em *Nova conversa*."
         ),
     ]
+
+
+def gravar_tabela(tabela: TabelaProposta, pasta: Path) -> Path:
+    """CSV com separador ``;`` (notação numérica brasileira), como o usuário escreveu."""
+    pasta.mkdir(parents=True, exist_ok=True)
+    caminho = pasta / tabela.arquivo
+    with caminho.open("w", encoding="utf-8", newline="") as arquivo:
+        escritor = csv.writer(arquivo, delimiter=";")
+        escritor.writerow(tabela.colunas)
+        escritor.writerows(tabela.linhas)
+    return caminho
+
+
+def _tabela_lida(tabela: TabelaProposta, caminho: Path) -> str:
+    """A tabela como o fluxo vai lê-la, com os números já interpretados."""
+    lida = ler_csv(caminho)
+    cabecalho = "| " + " | ".join(lida.colunas) + " |"
+    separador = "|" + "---|" * len(lida.colunas)
+    linhas = ["| " + " | ".join(_celula(c) for c in linha) + " |" for linha in lida.linhas]
+    return f"**`{tabela.arquivo}`**: {tabela.descricao}\n\n" + "\n".join(
+        [cabecalho, separador, *linhas]
+    )
+
+
+def _celula(valor: Celula) -> str:
+    if isinstance(valor, bool) or valor is None:
+        return "" if valor is None else str(valor)
+    if isinstance(valor, int | float):
+        return apresentacao.numero(valor)
+    return str(valor).replace("|", "\\|")
+
+
+def _faltantes(dados: DadosOrganizados) -> str:
+    if not dados.faltantes:
+        return ""
+    return "**Ainda faltam:**\n" + "\n".join(f"- {f}" for f in dados.faltantes)
 
 
 def _associar(pendentes: Sequence[Solicitacao], arquivos: list[Path]) -> dict[str, Path]:

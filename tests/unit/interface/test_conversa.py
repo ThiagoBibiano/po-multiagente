@@ -7,17 +7,21 @@ from typing import Any
 import gradio as gr
 import pytest
 
+from po_multiagente.agentes import Organizador
 from po_multiagente.avaliacao.instancia import carregar_instancia
 from po_multiagente.dominio import MotivoTratamento, Solicitacao
 from po_multiagente.experimento.roteiro import roteiro_do_gabarito
 from po_multiagente.interface import Assistente
 from po_multiagente.interface.chat import construir_chat, para_gradio, turno
 from po_multiagente.interface.conversa import (
+    CORRIGIR,
     NAO,
     NOVO,
+    ORGANIZANDO,
     REFAZER,
     SEGUIR_SEM,
     SIM,
+    USAR,
     Conversa,
     Mensagem,
     _associar,
@@ -234,3 +238,94 @@ def test_para_gradio_com_opcoes_e_arquivo(tmp_path: Path) -> None:
 def test_chat_monta_sem_abrir_servidor() -> None:
     app = construir_chat(lambda: Assistente(LLMRoteirizado({})), modelo="gemini-3.5-flash-lite")
     assert isinstance(app, gr.Blocks)
+
+
+# ------------------------------------------------- sem planilhas (ADR-015)
+
+DESCRICAO_COM_NUMEROS = (
+    "Fabricamos mesas, cadeiras e estantes. Margem por peça: mesa 120, cadeira 45 e estante "
+    "150. Horas de marcenaria por peça: mesa 4, cadeira 1,5 e estante 5. A marcenaria tem "
+    "200 horas no mês. Quero o plano de produção com a maior margem."
+)
+TABELAS = {
+    "tabelas": [
+        {
+            "arquivo": "produtos.csv",
+            "descricao": "Margem e horas de cada peça",
+            "colunas": ["Produto", "Margem por peça", "Horas de marcenaria"],
+            "linhas": [["Mesa", "120", "4"], ["Cadeira", "45", "1,5"], ["Estante", "150", "5"]],
+        },
+        {
+            "arquivo": "capacidade.csv",
+            "descricao": "Horas disponíveis",
+            "colunas": ["Horas no mês"],
+            "linhas": [["200"]],
+        },
+    ],
+    "faltantes": [],
+}
+
+
+def conversa_sem_planilha(llm: LLMRoteirizado, tmp_path: Path) -> Conversa:
+    return Conversa(
+        lambda: Assistente(llm, pasta_trabalho=tmp_path / "trabalho"),
+        tmp_path / "c",
+        organizador=Organizador(llm),
+    )
+
+
+def test_sem_planilha_monta_tabelas_para_conferir_e_resolve(tmp_path: Path) -> None:
+    llm = roteiro(organizador=[TABELAS])
+    c = conversa_sem_planilha(llm, tmp_path)
+    passos: list[str] = []
+    proposta = c.responder(DESCRICAO_COM_NUMEROS, ao_progresso=passos.append)
+    assert fase(c) == "dados"
+    assert passos == [ORGANIZANDO]
+    assert proposta[0].opcoes == (USAR, CORRIGIR)
+    assert "| Cadeira | 45 | 1,5 |" in proposta[0].texto
+    csvs = [m.arquivo for m in proposta if m.arquivo]
+    assert [p.name for p in csvs if p] == ["produtos.csv", "capacidade.csv"]
+    resposta = c.responder(USAR)
+    assert fase(c) == "resultado"
+    assert "tabelas que montei" in resposta[0].texto
+    assert "6.000" in resposta[1].texto
+
+
+def test_sem_numeros_pede_os_dados(tmp_path: Path) -> None:
+    faltantes = {"tabelas": [], "faltantes": ["a margem de cada peça"]}
+    c = conversa_sem_planilha(roteiro(organizador=[faltantes]), tmp_path)
+    resposta = c.responder("Quero saber quanto produzir de mesas e cadeiras.")
+    assert fase(c) == "pedido"
+    assert "- a margem de cada peça" in resposta[0].texto
+
+
+def test_correcao_refaz_as_tabelas(tmp_path: Path) -> None:
+    errada = json.loads(json.dumps(TABELAS))
+    errada["tabelas"][1]["linhas"] = [["150"]]
+    c = conversa_sem_planilha(roteiro(organizador=[errada, TABELAS]), tmp_path)
+    assert "| 150 |" in c.responder(DESCRICAO_COM_NUMEROS)[0].texto
+    assert "Escreva o que corrigir" in textos(c.responder(CORRIGIR))
+    corrigida = c.responder("A capacidade é de 200 horas, e não 150.")
+    assert fase(c) == "dados"
+    assert "| 200 |" in corrigida[0].texto
+    assert "A capacidade é de 200 horas" in c._descricao
+
+
+def test_planilha_anexada_depois_substitui_as_tabelas(tmp_path: Path) -> None:
+    pasta = criar_instancia(tmp_path / "inst")
+    c = conversa_sem_planilha(roteiro(organizador=[TABELAS]), tmp_path)
+    c.responder(DESCRICAO_COM_NUMEROS)
+    c.responder("", dados(pasta))
+    assert fase(c) == "resultado"
+
+
+def test_texto_anexado_vira_descricao_e_formato_desconhecido_avisa(tmp_path: Path) -> None:
+    pasta = criar_instancia(tmp_path / "inst")
+    descricao = tmp_path / "pedido.txt"
+    descricao.write_text(DESCRICAO, encoding="utf-8")
+    pdf = tmp_path / "manual.pdf"
+    pdf.write_bytes(b"%PDF")
+    c = conversa(roteiro(), tmp_path)
+    resposta = c.responder("", [descricao, pdf, *dados(pasta)])
+    assert "Não consigo ler `manual.pdf`" in resposta[0].texto
+    assert fase(c) == "resultado"

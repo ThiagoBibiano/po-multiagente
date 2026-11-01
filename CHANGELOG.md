@@ -99,6 +99,11 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   rápidas), alertas de ambiguidade com a leitura adotada, ajuste do pedido
   depois da resposta e detalhes técnicos recolhidos. A lógica fica em
   `interface.conversa`, sem Gradio; agentes, grafo e instruções não mudam.
+- Planilha opcional no chat (ADR-015): sem planilhas, o agente Organizador
+  monta tabelas com os números escritos na conversa (cada número conferido por
+  código contra o texto do usuário), o usuário as confere e confirma, corrige
+  ou anexa as próprias; o que falta vira pergunta. A caixa do chat aceita
+  qualquer anexo e lê `.txt`/`.md` como descrição.
 
 ### Corrigido
 

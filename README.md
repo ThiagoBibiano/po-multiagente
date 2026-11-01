@@ -44,8 +44,9 @@ a explicação primeiro e a formulação, a especificação e as validações em
 O botão *Carregar exemplo* traz o piloto da marcenaria.
 
 `iniciar(interface="chat")` abre a mesma plataforma em forma de conversa. Você
-descreve o problema e anexa as planilhas na caixa de mensagem, em uma ou várias
-mensagens. A plataforma pergunta no chat quando precisa de uma planilha ajustada
+descreve o problema e, se tiver, anexa as planilhas, em uma ou várias mensagens.
+Sem planilhas, a plataforma monta tabelas com os números que você escreveu,
+sem criar nenhum, e pede que você as confira antes de usar (ADR-015). A plataforma pergunta no chat quando precisa de uma planilha ajustada
 ou quando um resultado parece suspeito, e avisa os trechos do pedido que admitiam
 mais de uma leitura. Depois da resposta, um texto livre vira ajuste do pedido:
 a plataforma refaz com as mesmas planilhas, depois de você confirmar. Os
