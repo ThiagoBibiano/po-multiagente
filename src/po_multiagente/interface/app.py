@@ -8,6 +8,7 @@ cada agente aparece ao vivo.
 """
 
 import importlib
+import json
 import os
 import shutil
 import tempfile
@@ -15,7 +16,6 @@ import time
 from collections.abc import Callable, Sequence
 from importlib.resources import files
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import gradio as gr
@@ -81,6 +81,26 @@ _LATEX: list[dict[str, str | bool]] = [{"left": "$$", "right": "$$", "display": 
 
 ALTURA_NO_COLAB = 900
 """Altura, em pixels, da interface embutida no notebook (o padrão do Gradio é 500)."""
+
+_JS_COLAB = """
+(async (porta, altura, elemento) => {
+  if (!google.colab.kernel.accessAllowed) { return; }
+  elemento.appendChild(document.createTextNode(''));
+  const url = await google.colab.kernel.proxyPort(porta, {cache: false});
+  const aviso = document.createElement('div');
+  aviso.style.cssText = 'font-family: sans-serif; margin: 0.5rem 0 0.75rem';
+  aviso.innerHTML = 'A interface está pronta logo abaixo. Para usá-la em tela cheia, '
+    + '<a href="' + url + '" target="_blank" rel="noopener">abra em uma nova aba</a>.';
+  elemento.appendChild(aviso);
+  const quadro = document.createElement('iframe');
+  quadro.src = url;
+  quadro.width = '100%';
+  quadro.height = altura;
+  quadro.style.border = 0;
+  quadro.allow = 'clipboard-read; clipboard-write';
+  elemento.appendChild(quadro);
+})(PORTA, ALTURA, window.element);
+"""
 
 Telas = tuple[Any, ...]
 Progresso = Callable[..., Any]
@@ -236,18 +256,14 @@ def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
     _ler_segredo_do_colab(perfil_modelo.variavel_chave)
     llm = AdaptadorOpenAI(perfil_modelo)
     app = construir_app(lambda: Assistente(llm, configuracao), modelo=perfil_modelo.modelo)
-    saida = _saida_do_colab()
-    if saida is None or compartilhar:
+    if compartilhar or not _no_colab():
         app.launch(share=compartilhar, show_error=True)
         return
     # No Colab, a exibição automática do Gradio traz mensagens para quem programa
     # ("Running on https://localhost:7860/", dicas de debug e share) e 500 px de
-    # altura. Aqui o servidor sobe calado e a exibição é a do próprio Colab.
+    # altura. Aqui o servidor sobe calado, e a exibição é feita à parte.
     app.launch(share=False, show_error=True, quiet=True, inline=False, prevent_thread_lock=True)
-    porta = app.server_port
-    print("A interface está pronta logo abaixo. Para usá-la em tela cheia, abra o link.")
-    saida.serve_kernel_port_as_window(porta, anchor_text="Abrir a interface em uma nova aba")
-    saida.serve_kernel_port_as_iframe(porta, height=str(ALTURA_NO_COLAB))
+    _exibir_no_colab(app.server_port)
 
 
 def carregar_exemplo() -> tuple[str, list[str]]:
@@ -381,12 +397,26 @@ def _caminhos(enviados: Sequence[str] | None) -> list[Path]:
     return [Path(p) for p in enviados or []]
 
 
-def _saida_do_colab() -> ModuleType | None:
-    """O módulo ``google.colab.output``, ou ``None`` fora do Colab."""
+def _no_colab() -> bool:
     try:
-        return importlib.import_module("google.colab.output")
+        importlib.import_module("google.colab")
     except ImportError:
-        return None
+        return False
+    return True
+
+
+def _exibir_no_colab(porta: int) -> None:
+    """Frase com link para nova aba e a interface embutida, numa só saída da célula.
+
+    O endereço vem de ``google.colab.kernel.proxyPort``, o mesmo mecanismo que o
+    Gradio e o ``serve_kernel_port_as_iframe`` usam. O ``serve_kernel_port_as_window``
+    do Colab foi evitado: ele avisa que pode deixar de funcionar.
+    """
+    exibicao = importlib.import_module("IPython.display")
+    codigo = _JS_COLAB.replace("PORTA", json.dumps(porta)).replace(
+        "ALTURA", json.dumps(ALTURA_NO_COLAB)
+    )
+    exibicao.display(exibicao.Javascript(codigo))
 
 
 def _ler_segredo_do_colab(nome: str) -> None:

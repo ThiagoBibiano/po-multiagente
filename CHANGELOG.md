@@ -70,9 +70,11 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   verificação e o entendimento do pedido em texto; o JSON bruto fica
   recolhido.
 
-- No Colab, a saída da célula fala com o usuário: uma frase, um link para
+- No Colab, a saída da célula fala com o usuário: uma frase com link para
   abrir a interface em nova aba e a interface embutida com 900 px de altura,
-  no lugar das mensagens do Gradio para desenvolvedores.
+  no lugar das mensagens do Gradio para desenvolvedores. O endereço vem de
+  `google.colab.kernel.proxyPort`, sem a função `serve_kernel_port_as_window`,
+  que o Colab avisa estar em descontinuação.
 
 ### Corrigido
 
