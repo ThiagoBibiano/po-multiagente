@@ -107,6 +107,11 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- Chat no Colab: as tabelas montadas não abriam nem baixavam pelo chat (o link
+  de arquivo passa pelo proxy do Colab). Agora cada tabela aparece também como
+  texto para copiar, e os arquivos oferecidos (tabelas e ZIP do resultado)
+  ganham uma cópia em `/content/po-multiagente/`, visível no painel de arquivos.
+
 - "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que
   ficam dentro do pacote instalado (`dist-packages`); agora saem como cópias
   numa pasta temporária.
