@@ -140,8 +140,13 @@ def _violacoes(
         if fora or fracionaria:
             violacoes.append((variavel.variavel_id, f"{variavel.nome} = {valor:g} fora do domínio"))
     for restricao in modelo.restricoes:
-        lado_esquerdo = sum(c * valores[n] for n, c in restricao.termos)
-        folga = _folga(restricao.lado_direito, tolerancia)
+        parcelas = [c * valores[n] for n, c in restricao.termos]
+        lado_esquerdo = sum(parcelas)
+        # A folga acompanha o maior número envolvido, e não só o lado direito:
+        # numa razão compilada como ``C - k*N <= 0``, o lado direito é zero, mas
+        # o erro de arredondamento do solver é proporcional a C e a k*N.
+        escala = max([abs(restricao.lado_direito), *map(abs, parcelas)])
+        folga = _folga(escala, tolerancia)
         atendida = {
             Relacao.MENOR_OU_IGUAL: lado_esquerdo <= restricao.lado_direito + folga,
             Relacao.MAIOR_OU_IGUAL: lado_esquerdo >= restricao.lado_direito - folga,

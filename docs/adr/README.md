@@ -18,3 +18,4 @@ Formato curto baseado no [MADR](https://adr.github.io/madr/): contexto, decisão
 | [ADR-012](012-parametros-de-inferencia.md) | Parâmetros de inferência do gpt-6-luna | Substituída pela ADR-014 |
 | [ADR-013](013-numeros-por-marcador.md) | O Explicador só escreve números por marcador | Aceita |
 | [ADR-014](014-modelo-gemini-flash-lite.md) | Modelo do experimento: gemini-3.5-flash-lite, nível gratuito | Aceita |
+| [ADR-015](015-dados-na-conversa.md) | Dados escritos na conversa viram tabelas conferidas pelo usuário | Aceita |

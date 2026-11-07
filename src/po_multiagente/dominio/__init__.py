@@ -20,7 +20,12 @@ from po_multiagente.dominio.modelo_ir import (
     Variavel,
 )
 from po_multiagente.dominio.requisitos import AlertaAmbiguidade, Requisito
-from po_multiagente.dominio.resultados import IdentificacaoSolver, ResultadoSolver, StatusSolucao
+from po_multiagente.dominio.resultados import (
+    IdentificacaoSolver,
+    ResultadoSolver,
+    StatusSolucao,
+    UsoRestricao,
+)
 from po_multiagente.dominio.solicitacoes import MotivoTratamento, RespostaSolicitacao, Solicitacao
 from po_multiagente.dominio.validacao import ParecerValidador, Sinal, Verificacao
 
@@ -55,6 +60,7 @@ __all__ = [
     "StatusSolucao",
     "TipoColuna",
     "TipoVariavel",
+    "UsoRestricao",
     "Variavel",
     "Verificacao",
 ]

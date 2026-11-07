@@ -7,23 +7,31 @@ fontes de dados do usuário.
 No Colab::
 
     from po_multiagente import iniciar
-    iniciar()   # chave lida dos Secrets do Colab (por exemplo, GEMINI_API_KEY)
+    iniciar()                    # chave lida dos Secrets do Colab (por exemplo, GEMINI_API_KEY)
+    iniciar(interface="chat")    # a mesma plataforma, em forma de conversa
 """
 
 from importlib.metadata import version
+from typing import Literal
 
 __version__ = version("po-multiagente")
 
 __all__ = ["__version__", "iniciar"]
 
 
-def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
+def iniciar(
+    perfil: str | None = None,
+    *,
+    compartilhar: bool = False,
+    interface: Literal["etapas", "chat"] = "etapas",
+) -> None:
     """Abre a interface Gradio (extra ``po-multiagente[interface]``).
 
     Args:
         perfil: Perfil do modelo; o padrão é o do experimento.
         compartilhar: Gera um link público temporário do Gradio.
+        interface: ``etapas`` (formulário em passos) ou ``chat`` (conversa).
     """
     from po_multiagente.interface import iniciar as abrir  # noqa: PLC0415 — Gradio é opcional
 
-    abrir(perfil, compartilhar=compartilhar)
+    abrir(perfil, compartilhar=compartilhar, interface=interface)

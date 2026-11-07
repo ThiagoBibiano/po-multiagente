@@ -25,6 +25,18 @@ class IdentificacaoSolver(ObjetoDominio):
     versao: TextoNaoVazio
 
 
+class UsoRestricao(ObjetoDominio):
+    """Lado esquerdo de uma restrição na solução, ao lado do limite."""
+
+    uso: float
+    limite: float
+
+    @property
+    def folga(self) -> float:
+        """Distância até o limite (zero quando a restrição está no limite)."""
+        return abs(self.limite - self.uso)
+
+
 class ResultadoSolver(ObjetoDominio):
     """Resultado de uma execução do solver.
 
@@ -34,7 +46,10 @@ class ResultadoSolver(ObjetoDominio):
     Attributes:
         valores: Valor de cada variável instanciada; vazio sem solução.
         duais: Preços-sombra por restrição instanciada, quando o backend os
-            fornece (PL).
+            fornece (PL): variação do objetivo por unidade a mais no limite.
+        custos_reduzidos: Por variável instanciada, quando o backend os
+            fornece (PL): variação do objetivo por unidade a mais na variável.
+        usos: Uso e limite de cada restrição instanciada, quando há solução.
         tempo_segundos: Tempo de resolução informado pelo backend.
     """
 
@@ -43,6 +58,8 @@ class ResultadoSolver(ObjetoDominio):
     valor_objetivo: float | None = None
     valores: dict[str, float] = Field(default_factory=dict)
     duais: dict[str, float] | None = None
+    custos_reduzidos: dict[str, float] | None = None
+    usos: dict[str, UsoRestricao] = Field(default_factory=dict)
     tempo_segundos: NonNegativeFloat
 
     @model_validator(mode="after")

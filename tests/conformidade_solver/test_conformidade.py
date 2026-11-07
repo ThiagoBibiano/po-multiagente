@@ -33,6 +33,10 @@ def test_pl_com_otimo_conhecido_e_duais(backend: SolverBackend) -> None:
     assert r.valor_objetivo == pytest.approx(36.0)
     assert r.valores == pytest.approx({"x": 2.0, "y": 6.0})
     assert r.duais == pytest.approx({"planta1": 0.0, "planta2": 1.5, "planta3": 1.0})
+    assert r.custos_reduzidos == pytest.approx({"x": 0.0, "y": 0.0})
+    assert {n: (u.uso, u.limite, u.folga) for n, u in r.usos.items()} == pytest.approx(
+        {"planta1": (2.0, 4.0, 2.0), "planta2": (12.0, 12.0, 0.0), "planta3": (18.0, 18.0, 0.0)}
+    )
     assert r.solver.backend == backend.nome
     assert r.solver.versao
     assert execucao.log
@@ -51,6 +55,31 @@ def test_plim_difere_da_relaxacao(backend: SolverBackend) -> None:
     assert r.valor_objetivo == pytest.approx(20.0)
     assert r.valores == pytest.approx({"x": 4.0, "y": 0.0})
     assert r.duais is None
+    assert r.custos_reduzidos is None
+    assert r.usos["b"].folga == pytest.approx(2.0)
+
+
+@pytest.mark.parametrize(
+    ("sentido", "custos", "relacao", "esperado"),
+    [
+        # máx x + 5y, x + y <= 4 → y = 4; forçar x tira 4; +1 no limite dá +5.
+        (Sentido.MAXIMIZAR, {"x": 1.0, "y": 5.0}, LE, (-4.0, 5.0)),
+        # mín 6x + 2y, x + y >= 4 → y = 4; forçar x custa 4; +1 no limite custa 2.
+        (Sentido.MINIMIZAR, {"x": 6.0, "y": 2.0}, GE, (4.0, 2.0)),
+    ],
+)
+def test_sinais_do_custo_reduzido_e_do_preco_sombra(
+    backend: SolverBackend,
+    sentido: Sentido,
+    custos: dict[str, float],
+    relacao: Relacao,
+    esperado: tuple[float, float],
+) -> None:
+    m = neutro(
+        sentido, custos, [var("x"), var("y")], [res("r", {"x": 1.0, "y": 1.0}, relacao, 4.0)]
+    )
+    r = backend.resolver(m, motor=backend.motores()[0], opcoes=OpcoesSolver()).resultado
+    assert ((r.custos_reduzidos or {})["x"], (r.duais or {})["r"]) == pytest.approx(esperado)
 
 
 def test_binarias(backend: SolverBackend) -> None:
