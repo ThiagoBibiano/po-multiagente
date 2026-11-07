@@ -16,9 +16,11 @@ from po_multiagente.agentes.explicador import Explicador, formatar_numero
 from po_multiagente.agentes.gerador_executor import Execucao, GeradorExecutor
 from po_multiagente.agentes.interpretador import Interpretador, ResultadoInterpretador, Rodada
 from po_multiagente.agentes.modelador import Modelador, ResultadoModelador
+from po_multiagente.agentes.organizador import DadosOrganizados, Organizador
 from po_multiagente.agentes.validador import Validador
 
 __all__ = [
+    "DadosOrganizados",
     "ErroAgente",
     "ErroFormato",
     "Execucao",
@@ -26,6 +28,7 @@ __all__ = [
     "GeradorExecutor",
     "Interpretador",
     "Modelador",
+    "Organizador",
     "Registro",
     "RegistroChamada",
     "ResultadoInterpretador",

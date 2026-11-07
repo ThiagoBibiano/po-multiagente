@@ -30,3 +30,5 @@ nav:
       - adr/011-confirmacao-com-usuario.md
       - adr/012-parametros-de-inferencia.md
       - adr/013-numeros-por-marcador.md
+      - adr/014-modelo-gemini-flash-lite.md
+      - adr/015-dados-na-conversa.md

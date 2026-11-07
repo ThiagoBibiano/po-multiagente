@@ -1,8 +1,9 @@
 """Interface de linha de comando ``po-multiagente``.
 
-Subcomandos disponíveis: ``validar-instancia`` e ``calibrar``. Os
-subcomandos ``executar``, ``experimento`` e ``avaliar`` entram nas fases que
-os implementam.
+Subcomandos: ``validar-instancia``, ``calibrar``, ``experimento`` (Passo 7:
+todas as instâncias, nas duas configurações, três repetições, retomável) e
+``avaliar`` (critérios 1 a 4, McNemar e tabelas ``.tex`` de uma pasta de
+execuções).
 """
 
 import argparse
@@ -12,6 +13,7 @@ from pathlib import Path
 
 from po_multiagente import __version__
 from po_multiagente.avaliacao.instancia import RelatorioInstancia, validar_instancia
+from po_multiagente.avaliacao.resultados import avaliar
 from po_multiagente.config import ConfiguracaoExecucao
 from po_multiagente.experimento.calibracao import calibrar, pastas_da_particao, resumo
 
@@ -57,6 +59,26 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     calibrar.add_argument("--repeticoes", type=int, default=1)
     calibrar.add_argument("--saida", type=Path, default=Path("saidas/calibracao"))
+    experimento = subcomandos.add_parser(
+        "experimento",
+        help="Passo 7: todas as instâncias, com e sem Validador, intercaladas e retomáveis",
+    )
+    experimento.add_argument("conjunto", type=Path, help="pasta com as instâncias")
+    experimento.add_argument(
+        "--modo", choices=("chamar", "gravar", "reproduzir", "roteiro"), default="gravar"
+    )
+    experimento.add_argument("--perfil", default=ConfiguracaoExecucao().perfil_modelo)
+    experimento.add_argument("--repeticoes", type=int, default=3)
+    experimento.add_argument(
+        "--saida",
+        type=Path,
+        help="pasta do lote; se já tiver execuções, o lote continua de onde parou",
+    )
+    avaliar_ = subcomandos.add_parser(
+        "avaliar", help="critérios 1 a 4, McNemar e tabelas .tex de uma pasta de execuções"
+    )
+    avaliar_.add_argument("saida", type=Path, help="pasta com execucoes/")
+    avaliar_.add_argument("conjunto", type=Path, help="pasta com as instâncias")
     return parser
 
 
@@ -80,6 +102,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if validas == len(relatorios) else 1
     if argumentos.comando == "calibrar":
         return _calibrar(argumentos)
+    if argumentos.comando == "experimento":
+        return _experimento(argumentos)
+    if argumentos.comando == "avaliar":
+        print(avaliar(argumentos.saida, argumentos.conjunto))
+        return 0
     parser.print_help()
     return 0
 
@@ -97,6 +124,18 @@ def _calibrar(argumentos: argparse.Namespace) -> int:
         pastas, argumentos.saida / carimbo, argumentos.modo, configuracoes, argumentos.repeticoes
     )
     print("\n" + resumo(medidas))
+    return 0
+
+
+def _experimento(argumentos: argparse.Namespace) -> int:
+    base = ConfiguracaoExecucao(perfil_modelo=argumentos.perfil)
+    configuracoes = [base, base.model_copy(update={"validador": False})]
+    pastas = pastas_da_particao(argumentos.conjunto, "todas")
+    saida = argumentos.saida or Path("saidas/experimento") / datetime.now(UTC).strftime(
+        "%Y%m%dT%H%M%SZ"
+    )
+    calibrar(pastas, saida, argumentos.modo, configuracoes, argumentos.repeticoes)
+    print("\n" + avaliar(saida, argumentos.conjunto))
     return 0
 
 

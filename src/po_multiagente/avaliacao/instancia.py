@@ -26,6 +26,7 @@ from typing import Any
 
 import yaml
 
+from po_multiagente.avaliacao.formulacao import ComparacaoFormulacao, comparar_formulacoes
 from po_multiagente.dados import ErroDados, ErroLigacao, Fontes, ligar
 from po_multiagente.dominio import (
     Especificacao,
@@ -128,6 +129,50 @@ def carregar_instancia(pasta: Path) -> Instancia:
         status_esperado=StatusSolucao(solucao.get("status", StatusSolucao.OTIMO.value)),
         valor_esperado=(float(solucao["valor_objetivo"]) if "valor_objetivo" in solucao else None),
         meta=meta,
+    )
+
+
+def instanciar_na_instancia(
+    instancia: Instancia, modelo: ModeloIR, especificacao: Especificacao
+) -> ModeloInstanciado:
+    """Instancia um modelo com os dados da instância, inclusive os tratados.
+
+    Serve tanto para a referência quanto para o modelo produzido numa
+    execução, cujas origens apontam para os mesmos arquivos.
+
+    Raises:
+        ErroCompilacao: Se o modelo não compilar.
+        ErroLigacao: Se algum conjunto ou parâmetro não for encontrado nos dados.
+        ErroInstanciacao: Se faltar valor para algum membro.
+    """
+    dados = ligar(modelo, especificacao, instancia.fontes)
+    return instanciar(compilar(modelo), dados.conjuntos, dados.parametros)
+
+
+def avaliar_formulacao(
+    instancia: Instancia,
+    modelo: ModeloIR,
+    especificacao: Especificacao,
+    *,
+    backend: str = "pulp",
+    motor: str = "cbc",
+) -> ComparacaoFormulacao | None:
+    """Critério 1 de uma execução: o modelo produzido contra a referência.
+
+    Returns:
+        ``None`` quando o modelo produzido não compila ou não se liga aos
+        dados; nesse caso a formulação não é avaliável e conta como errada.
+    """
+    try:
+        produzido = instanciar_na_instancia(instancia, modelo, especificacao)
+    except (ErroCompilacao, ErroLigacao, ErroInstanciacao):
+        return None
+    referencia = instanciar_na_instancia(instancia, instancia.modelo, instancia.especificacao)
+    solver = obter_backend(backend)
+    return comparar_formulacoes(
+        produzido,
+        referencia,
+        lambda m: solver.resolver(m, motor=motor, opcoes=OpcoesSolver()).resultado,
     )
 
 

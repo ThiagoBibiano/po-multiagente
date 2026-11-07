@@ -5,6 +5,8 @@ sem depender do Gradio; ``iniciar`` abre a interface e exige o extra
 ``po-multiagente[interface]``.
 """
 
+from typing import Literal
+
 from po_multiagente.interface.assistente import (
     Assistente,
     ErroAssistente,
@@ -16,8 +18,13 @@ from po_multiagente.interface.assistente import (
 __all__ = ["Assistente", "ErroAssistente", "Etapa", "Resultado", "TipoEtapa", "iniciar"]
 
 
-def iniciar(perfil: str | None = None, *, compartilhar: bool = False) -> None:
+def iniciar(
+    perfil: str | None = None,
+    *,
+    compartilhar: bool = False,
+    interface: Literal["etapas", "chat"] = "etapas",
+) -> None:
     """Abre a interface; ver ``po_multiagente.interface.app.iniciar``."""
     from po_multiagente.interface.app import iniciar as abrir  # noqa: PLC0415 — Gradio é opcional
 
-    abrir(perfil, compartilhar=compartilhar)
+    abrir(perfil, compartilhar=compartilhar, interface=interface)

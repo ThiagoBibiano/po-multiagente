@@ -76,8 +76,50 @@ o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   `google.colab.kernel.proxyPort`, sem a função `serve_kernel_port_as_window`,
   que o Colab avisa estar em descontinuação.
 
+- Avaliação (F6): critério 1 por componente (`avaliacao.formulacao`), que
+  compara os modelos instanciados, identifica as variáveis pelos membros e
+  não pelos nomes, normaliza as restrições e aceita equivalências conferidas
+  pelo solver; maioria entre repetições, McNemar exato, recortes por faixa,
+  origem, família e classe, critério 4, categoria sugerida das falhas e
+  tabelas `.tex` (`avaliacao.resultados`).
+- CLI: `experimento` (todas as instâncias, duas configurações, três
+  repetições) e `avaliar` (reavalia uma pasta de execuções). O executor
+  retoma um lote interrompido a partir das execuções já gravadas.
+- `Medida` registra faixa, origem e o critério 1.
+- Dossiê de cada execução (F3, `rastreabilidade`): pedido, quadro, modelo
+  em JSON e LaTeX, solução e log do solver, validações, explicação com a
+  procedência dos números, chamadas ao modelo de linguagem, configuração,
+  versões e hash de cada planilha no início e no fim. Sai como ZIP com
+  `index.html`, no download da interface e em `dossies/` de cada lote do
+  experimento.
+
+- Interface de chat (`iniciar(interface="chat")`): o mesmo fluxo em forma de
+  conversa, com pedido e planilhas em uma ou várias mensagens, andamento ao
+  vivo, solicitações e conferência do resultado como perguntas (com respostas
+  rápidas), alertas de ambiguidade com a leitura adotada, ajuste do pedido
+  depois da resposta e detalhes técnicos recolhidos. A lógica fica em
+  `interface.conversa`, sem Gradio; agentes, grafo e instruções não mudam.
+- Planilha opcional no chat (ADR-015): sem planilhas, o agente Organizador
+  monta tabelas com os números escritos na conversa (cada número conferido por
+  código contra o texto do usuário), o usuário as confere e confirma, corrige
+  ou anexa as próprias; o que falta vira pergunta. A caixa do chat aceita
+  qualquer anexo e lê `.txt`/`.md` como descrição.
+- Limites e preços-sombra: o resultado do solver traz o uso de cada restrição
+  e, em PL, os custos reduzidos (além dos preços-sombra, que já vinham). As
+  duas interfaces ganham a seção "Limites e preços-sombra" (uso, limite,
+  folga, preço-sombra e custo reduzido das decisões em zero; em PLIM, só uso
+  e folga, com o motivo), e o ZIP, `restricoes.csv` e a coluna
+  `custo_reduzido` em `solucao.csv`. O Explicador e as instruções não mudam.
+
 ### Corrigido
 
+- Chat no Colab: as tabelas montadas não abriam nem baixavam pelo chat (o link
+  de arquivo passa pelo proxy do Colab). Agora cada tabela aparece também como
+  texto para copiar, e os arquivos oferecidos (tabelas e ZIP do resultado)
+  ganham uma cópia em `/content/po-multiagente/`, visível no painel de arquivos.
+- S5: a folga de cada restrição acompanha o maior termo, e não só o lado
+  direito. Numa razão compilada como `C - k*N <= 0`, o erro de arredondamento
+  do solver (da ordem de 1e-5) reprovava um modelo correto.
 - "Carregar exemplo" no Colab: o Gradio recusava os arquivos do exemplo, que
   ficam dentro do pacote instalado (`dist-packages`); agora saem como cópias
   numa pasta temporária.
